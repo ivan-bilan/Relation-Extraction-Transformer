@@ -4,7 +4,9 @@ Self-Attention for Relation Extraction
 Augmenting attention mechanisms for Relation Extraction.
 
 The Center for Information and Language Processing (CIS)
+
 Ludwig Maximilian University of Munich
+
 Ivan Bilan
 
 
