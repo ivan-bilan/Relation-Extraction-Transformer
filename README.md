@@ -1,15 +1,17 @@
-Position-aware Attention RNN Model for Relation Extraction
+Self-Attention for Relation Extraction
 =========================
 
-This repo contains the *pytorch* code for paper [Position-aware Attention and Supervised Data Improve Slot Filling](https://nlp.stanford.edu/pubs/zhang2017tacred.pdf).
+Augmenting attention mechanisms for Relation Extraction.
 
-**About TACRED data**: Please note that we are still in the process of licensing TACRED with LDC. For completeness this repo only contains sampled data from TACRED. If you'd like to receive email notifications once TACRED is ready for download, please [**fill out this form**](https://goo.gl/forms/nO70omzVyRNbDXt53).
+The Center for Information and Language Processing (CIS)
+Ludwig Maximilian University of Munich
+Ivan Bilan
+
 
 ## Requirements
 
-- Python 3 (tested on 3.6.2)
-- PyTorch (tested on 0.1.12)
-- unzip, wget (for downloading only)
+- Python 3.6.2
+- PyTorch 0.3
 
 ## Preparation
 
@@ -53,7 +55,3 @@ This will use the `best_model.pt` by default. Use `--model checkpoint_epoch_10.p
 ## Ensemble
 
 Please see the example script `ensemble.sh`.
-
-## License
-
-All work contained in this package is licensed under the Apache License, Version 2.0. See the included LICENSE file.
