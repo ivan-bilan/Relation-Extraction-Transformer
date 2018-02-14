@@ -1,8 +1,10 @@
 """
 A rnn model for relation extraction, written in pytorch.
 """
+
 import math
 import numpy as np
+
 import torch
 from torch import nn
 from torch.nn import init
@@ -10,23 +12,28 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 from utils import constant, torch_utils
-from model import layers
+from .self_attention import SelfAttention
 
 
 class RelationModel(object):
     """ A wrapper class for the training and evaluation of models. """
+
     def __init__(self, opt, emb_matrix=None):
+
         self.opt = opt
         self.model = PositionAwareRNN(opt, emb_matrix)
         self.criterion = nn.CrossEntropyLoss()
         self.parameters = [p for p in self.model.parameters() if p.requires_grad]
+
         if opt['cuda']:
             self.model.cuda()
             self.criterion.cuda()
+
         self.optimizer = torch_utils.get_optimizer(opt['optim'], self.parameters, opt['lr'])
     
     def update(self, batch):
         """ Run a step of forward and backward model update. """
+
         if self.opt['cuda']:
             inputs = [Variable(b.cuda()) for b in batch[:7]]
             labels = Variable(batch[7].cuda())
@@ -49,6 +56,7 @@ class RelationModel(object):
 
     def predict(self, batch, unsort=True):
         """ Run forward prediction. If unsort is True, recover the original order of the batch. """
+
         if self.opt['cuda']:
             inputs = [Variable(b.cuda()) for b in batch[:7]]
             labels = Variable(batch[7].cuda())
@@ -65,8 +73,8 @@ class RelationModel(object):
         probs = F.softmax(logits).data.cpu().numpy().tolist()
         predictions = np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
         if unsort:
-            _, predictions, probs = [list(t) for t in zip(*sorted(zip(orig_idx,\
-                    predictions, probs)))]
+            _, predictions, probs = [list(t) for t in zip(*sorted(zip(orig_idx, predictions, probs)))]
+
         return predictions, probs, loss.data[0]
 
     def update_lr(self, new_lr):
@@ -94,6 +102,75 @@ class RelationModel(object):
         self.opt = checkpoint['config']
 
 
+class PositionAwareAttention(nn.Module):
+    """
+    A position-augmented attention layer where the attention weight is
+    a = T' . tanh(Ux + Vq + Wf)
+    where x is the input, q is the query, and f is additional position features.
+    """
+
+    def __init__(self, input_size, query_size, feature_size, attn_size):
+        super(PositionAwareAttention, self).__init__()
+
+        self.input_size = input_size
+        self.query_size = query_size
+        self.feature_size = feature_size
+        self.attn_size = attn_size
+        self.ulinear = nn.Linear(input_size, attn_size)
+        self.vlinear = nn.Linear(query_size, attn_size, bias=False)
+
+        if feature_size > 0:
+            self.wlinear = nn.Linear(feature_size, attn_size, bias=False)
+        else:
+            self.wlinear = None
+
+        self.tlinear = nn.Linear(attn_size, 1)
+        self.init_weights()
+
+    def init_weights(self):
+        self.ulinear.weight.data.normal_(std=0.001)
+        self.vlinear.weight.data.normal_(std=0.001)
+        if self.wlinear is not None:
+            self.wlinear.weight.data.normal_(std=0.001)
+        self.tlinear.weight.data.zero_()  # use zero to give uniform attention at the beginning
+
+    def forward(self, x, x_mask, q, f):
+        """
+        x : batch_size * seq_len * input_size
+        q : batch_size * query_size
+        f : batch_size * seq_len * feature_size
+        """
+
+        batch_size, seq_len, _ = x.size()
+
+        x_proj = self.ulinear(x.contiguous().view(-1, self.input_size)).view(
+            batch_size, seq_len, self.attn_size)
+
+        q_proj = self.vlinear(q.view(-1, self.query_size)).contiguous().view(
+            batch_size, self.attn_size).unsqueeze(1).expand(
+            batch_size, seq_len, self.attn_size)
+
+        if self.wlinear is not None:
+            f_proj = self.wlinear(f.view(-1, self.feature_size)).contiguous().view(
+                batch_size, seq_len, self.attn_size)
+            projs = [x_proj, q_proj, f_proj]
+        else:
+            projs = [x_proj, q_proj]
+
+        # view in PyTorch is like reshape in numpy, view(n_rows, n_columns)
+        # view(-1, n_columns) - here we define the number of columns, but n_rows will be chosen by PyTorch
+        scores = self.tlinear(F.tanh(sum(projs)).view(-1, self.attn_size)).view(batch_size, seq_len)
+
+        # mask padding
+        scores.data.masked_fill_(x_mask.data, -float('inf'))
+        weights = F.softmax(scores)
+
+        # weighted average input vectors
+        outputs = weights.unsqueeze(1).bmm(x).squeeze(1)
+
+        return outputs
+
+
 class PositionAwareRNN(nn.Module):
     """ A sequence model for relation extraction. """
 
@@ -101,21 +178,32 @@ class PositionAwareRNN(nn.Module):
         super(PositionAwareRNN, self).__init__()
         self.drop = nn.Dropout(opt['dropout'])
         self.emb = nn.Embedding(opt['vocab_size'], opt['emb_dim'], padding_idx=constant.PAD_ID)
+
+        # part of speech embeddings
         if opt['pos_dim'] > 0:
             self.pos_emb = nn.Embedding(len(constant.POS_TO_ID), opt['pos_dim'],
                     padding_idx=constant.PAD_ID)
+
+        # ner embeddings
         if opt['ner_dim'] > 0:
-            self.ner_emb = nn.Embedding(len(constant.NER_TO_ID), opt['ner_dim'],
-                    padding_idx=constant.PAD_ID)
-        
+            self.ner_emb = nn.Embedding(len(constant.NER_TO_ID), opt['ner_dim'], padding_idx=constant.PAD_ID)
         input_size = opt['emb_dim'] + opt['pos_dim'] + opt['ner_dim']
-        self.rnn = nn.LSTM(input_size, opt['hidden_dim'], opt['num_layers'], batch_first=True,\
-                dropout=opt['dropout'])
+
+        # initial implementation
+        self.rnn = nn.LSTM(input_size, opt['hidden_dim'], opt['num_layers'], batch_first=True, dropout=opt['dropout'])
+
+        # instead of LSTM to get h, try using self-attention
+        # self.rnn = SelfAttention(opt['hidden_dim'], batch_first=True)
+
         self.linear = nn.Linear(opt['hidden_dim'], opt['num_class'])
 
         if opt['attn']:
-            self.attn_layer = layers.PositionAwareAttention(opt['hidden_dim'],
-                    opt['hidden_dim'], 2*opt['pe_dim'], opt['attn_dim'])
+            self.attn_layer = PositionAwareAttention(
+                opt['hidden_dim'],
+                opt['hidden_dim'],
+                2*opt['pe_dim'],
+                opt['attn_dim']
+            )
             self.pe_emb = nn.Embedding(constant.MAX_LEN * 2 + 1, opt['pe_dim'])
 
         self.opt = opt
@@ -126,7 +214,7 @@ class PositionAwareRNN(nn.Module):
     
     def init_weights(self):
         if self.emb_matrix is None:
-            self.emb.weight.data[1:,:].uniform_(-1.0, 1.0) # keep padding dimension to be 0
+            self.emb.weight.data[1:,:].uniform_(-1.0, 1.0)  # keep padding dimension to be 0
         else:
             self.emb_matrix = torch.from_numpy(self.emb_matrix)
             self.emb.weight.data.copy_(self.emb_matrix)
@@ -136,18 +224,17 @@ class PositionAwareRNN(nn.Module):
             self.ner_emb.weight.data[1:,:].uniform_(-1.0, 1.0)
 
         self.linear.bias.data.fill_(0)
-        init.xavier_uniform(self.linear.weight, gain=1) # initialize linear layer
+        init.xavier_uniform(self.linear.weight, gain=1)  # initialize linear layer
         if self.opt['attn']:
             self.pe_emb.weight.data.uniform_(-1.0, 1.0)
 
-        # decide finetuning
+        # decide fine-tuning
         if self.topn <= 0:
             print("Do not finetune word embedding layer.")
             self.emb.weight.requires_grad = False
         elif self.topn < self.opt['vocab_size']:
             print("Finetune top {} word embeddings.".format(self.topn))
-            self.emb.weight.register_hook(lambda x: \
-                    torch_utils.keep_partial_grad(x, self.topn))
+            self.emb.weight.register_hook(lambda x: torch_utils.keep_partial_grad(x, self.topn))
         else:
             print("Finetune all embeddings.")
 
@@ -160,7 +247,7 @@ class PositionAwareRNN(nn.Module):
             return h0, c0
     
     def forward(self, inputs):
-        words, masks, pos, ner, deprel, subj_pos, obj_pos = inputs # unpack
+        words, masks, pos, ner, deprel, subj_pos, obj_pos = inputs  # unpack
         seq_lens = list(masks.data.eq(constant.PAD_ID).long().sum(1).squeeze())
         batch_size = words.size()[0]
         
@@ -171,15 +258,17 @@ class PositionAwareRNN(nn.Module):
             inputs += [self.pos_emb(pos)]
         if self.opt['ner_dim'] > 0:
             inputs += [self.ner_emb(ner)]
-        inputs = self.drop(torch.cat(inputs, dim=2)) # add dropout to input
+        inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
         
         # rnn
         h0, c0 = self.zero_state(batch_size)
+        # instead of padding, you have to pack and pad in pytorch
+        # more at https://discuss.pytorch.org/t/understanding-pack-padded-sequence-and-pad-packed-sequence/4099/2
         inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
         outputs, (ht, ct) = self.rnn(inputs, (h0, c0))
         outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
-        hidden = self.drop(ht[-1,:,:]) # get the outmost layer h_n
+        hidden = self.drop(ht[-1,:,:])  # get the outmost layer h_n
         outputs = self.drop(outputs)
         
         # attention
@@ -195,5 +284,3 @@ class PositionAwareRNN(nn.Module):
 
         logits = self.linear(final_hidden)
         return logits, final_hidden
-    
-
