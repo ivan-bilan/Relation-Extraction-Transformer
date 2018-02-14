@@ -1,14 +1,49 @@
-with postional binning, window 3:
 
-2018-02-14 12:36:32.458671: step 22800/45030 (epoch 16/30), loss = 0.339725 (0.041 sec/batch), lr: 1.000000
-2018-02-14 12:36:50.336218: step 23200/45030 (epoch 16/30), loss = 0.310790 (0.043 sec/batch), lr: 1.000000
-2018-02-14 12:37:08.295983: step 23600/45030 (epoch 16/30), loss = 0.167656 (0.044 sec/batch), lr: 1.000000
-2018-02-14 12:37:26.176538: step 24000/45030 (epoch 16/30), loss = 0.366856 (0.043 sec/batch), lr: 1.000000
-Evaluating on dev set...
-Precision (micro): 65.504%
-   Recall (micro): 68.617%
-       F1 (micro): 67.025%
-epoch 16: train_loss = 0.289900, dev_loss = 0.455458, dev_f1 = 0.6702
-model saved to ./saved_models/01/checkpoint_epoch_16.pt
-new best model saved.
+with positional binning, window 3:
 
+org:alternate_names                  P:  66.79%  R:  76.45%  F1:  71.29%  #: 242
+org:city_of_headquarters             P:  67.01%  R:  69.15%  F1:  68.06%  #: 94
+org:country_of_headquarters          P:  63.24%  R:  34.96%  F1:  45.03%  #: 123
+org:dissolved                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 4
+org:founded                          P:  86.67%  R:  82.98%  F1:  84.78%  #: 47
+org:founded_by                       P:  66.15%  R:  48.31%  F1:  55.84%  #: 89
+org:member_of                        P:   0.00%  R:   0.00%  F1:   0.00%  #: 36
+org:members                          P:   0.00%  R:   0.00%  F1:   0.00%  #: 41
+org:number_of_employees/members      P:  56.52%  R:  59.09%  F1:  57.78%  #: 22
+org:parents                          P:  34.48%  R:  26.32%  F1:  29.85%  #: 76
+org:political/religious_affiliation  P:  45.45%  R:  29.41%  F1:  35.71%  #: 17
+org:shareholders                     P:  33.33%  R:  13.33%  F1:  19.05%  #: 15
+org:stateorprovince_of_headquarters  P:  62.07%  R:  62.07%  F1:  62.07%  #: 58
+org:subsidiaries                     P:  31.15%  R:  36.54%  F1:  33.63%  #: 52
+org:top_members/employees            P:  67.58%  R:  78.48%  F1:  72.62%  #: 409
+org:website                          P:  72.09%  R:  86.11%  F1:  78.48%  #: 36
+per:age                              P:  83.06%  R:  92.94%  F1:  87.72%  #: 269
+per:alternate_names                  P:   0.00%  R:   0.00%  F1:   0.00%  #: 13
+per:cause_of_death                   P:  66.67%  R:  31.03%  F1:  42.35%  #: 58
+per:charges                          P:  70.27%  R:  83.20%  F1:  76.19%  #: 125
+per:children                         P:  45.00%  R:  43.90%  F1:  44.44%  #: 41
+per:cities_of_residence              P:  55.32%  R:  44.64%  F1:  49.41%  #: 233
+per:city_of_birth                    P:  57.14%  R:  44.44%  F1:  50.00%  #: 9
+per:city_of_death                    P:  87.50%  R:  19.44%  F1:  31.82%  #: 36
+per:countries_of_residence           P:  58.39%  R:  47.24%  F1:  52.22%  #: 199
+per:country_of_birth                 P:   0.00%  R:   0.00%  F1:   0.00%  #: 9
+per:country_of_death                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 16
+per:date_of_birth                    P:  61.54%  R:  80.00%  F1:  69.57%  #: 10
+per:date_of_death                    P:  48.94%  R:  37.10%  F1:  42.20%  #: 62
+per:employee_of                      P:  66.03%  R:  58.69%  F1:  62.14%  #: 351
+per:origin                           P:  70.83%  R:  62.20%  F1:  66.23%  #: 164
+per:other_family                     P:  44.87%  R:  39.77%  F1:  42.17%  #: 88
+per:parents                          P:  69.39%  R:  61.26%  F1:  65.07%  #: 111
+per:religion                         P:  52.78%  R:  63.33%  F1:  57.58%  #: 60
+per:schools_attended                 P:  63.89%  R:  62.16%  F1:  63.01%  #: 37
+per:siblings                         P:  59.32%  R:  50.72%  F1:  54.69%  #: 69
+per:spouse                           P:  66.67%  R:  65.75%  F1:  66.21%  #: 73
+per:stateorprovince_of_birth         P:  38.89%  R:  63.64%  F1:  48.28%  #: 11
+per:stateorprovince_of_death         P:  36.36%  R:  26.67%  F1:  30.77%  #: 15
+per:stateorprovinces_of_residence    P:  56.41%  R:  22.68%  F1:  32.35%  #: 97
+per:title                            P:  79.72%  R:  80.99%  F1:  80.35%  #: 626
+
+Final Score:
+Precision (micro): 66.345%
+   Recall (micro): 61.477%
+       F1 (micro): 63.819%
