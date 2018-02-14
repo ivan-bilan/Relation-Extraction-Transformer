@@ -10,6 +10,7 @@ from collections import Counter
 from data.loader import DataLoader
 from utils import scorer, constant
 
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('pred_files', nargs='+', help='A list of prediction files written by eval.py.')
@@ -17,6 +18,7 @@ def parse_args():
     parser.add_argument('--dataset', default='test', help='Evaluate on dev or test set.')
     args = parser.parse_args()
     return args
+
 
 def main():
     args = parse_args()
@@ -37,13 +39,16 @@ def main():
     print("Calculating ensembled predictions...")
     predictions = []
     scores_by_examples = list(zip(*scores_list))
+
     assert len(scores_by_examples) == len(data)
     for scores in scores_by_examples:
         pred = ensemble(scores)
         predictions += [pred]
+
     id2label = dict([(v,k) for k,v in constant.LABEL_TO_ID.items()])
     predictions = [id2label[p] for p in predictions]
     scorer.score(labels, predictions, verbose=True)
+
 
 def ensemble(scores):
     """
@@ -56,6 +61,6 @@ def ensemble(scores):
     best = c.most_common(1)[0][0]
     return best
 
+
 if __name__ == '__main__':
     main()
-

@@ -146,6 +146,7 @@ def save(model, optimizer, opt, filename):
     except BaseException:
         print("[ Warning: model saving failed. ]")
 
+
 def load(model, optimizer, filename):
     try:
         dump = torch.load(filename)
@@ -157,6 +158,7 @@ def load(model, optimizer, filename):
         optimizer.load_state_dict(dump['optimizer'])
     opt = dump['config']
     return model, optimizer, opt
+
 
 def load_config(filename):
     try:

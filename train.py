@@ -126,10 +126,12 @@ for epoch in range(1, opt['num_epoch']+1):
     print("Evaluating on dev set...")
     predictions = []
     dev_loss = 0
+
     for i, batch in enumerate(dev_batch):
         preds, _, loss = model.predict(batch)
         predictions += preds
         dev_loss += loss
+
     predictions = [id2label[p] for p in predictions]
     dev_p, dev_r, dev_f1 = scorer.score(dev_batch.gold(), predictions)
     

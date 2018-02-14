@@ -9,6 +9,7 @@ from collections import Counter
 
 from utils import vocab, constant, helper
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Prepare vocab for relation extraction.')
     parser.add_argument('data_dir', help='TACRED directory.')
@@ -21,6 +22,7 @@ def parse_args():
     
     args = parser.parse_args()
     return args
+
 
 def main():
     args = parse_args()
@@ -70,6 +72,7 @@ def main():
     np.save(emb_file, embedding)
     print("all done.")
 
+
 def load_tokens(filename):
     with open(filename) as infile:
         data = json.load(infile)
@@ -78,6 +81,7 @@ def load_tokens(filename):
             tokens += d['token']
     print("{} tokens from {} examples loaded from {}.".format(len(tokens), len(data), filename))
     return tokens
+
 
 def build_vocab(tokens, glove_vocab, min_freq):
     """ build vocab from tokens and glove words. """
@@ -92,11 +96,13 @@ def build_vocab(tokens, glove_vocab, min_freq):
     print("vocab built with {}/{} words.".format(len(v), len(counter)))
     return v
 
+
 def count_oov(tokens, vocab):
     c = Counter(t for t in tokens)
     total = sum(c.values())
     matched = sum(c[t] for t in vocab)
     return total, total-matched
+
 
 def entity_masks():
     """ Get all entity mask tokens as a list. """
@@ -107,7 +113,6 @@ def entity_masks():
     masks += ["OBJ-" + e for e in obj_entities]
     return masks
 
+
 if __name__ == '__main__':
     main()
-
-
