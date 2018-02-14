@@ -113,9 +113,10 @@ class DataLoader(object):
 
 
     """
-    # trying out more performative approaches to binning:
     
-    # variant 1
+    # trying out more performative approaches to binning:
+     
+    # variant 1 #
     import numpy as np
 
     def bin_list(l, width):
@@ -131,13 +132,44 @@ class DataLoader(object):
     print(bin_list(l,3))
     print(bin_list(l,4))
     
-    # variant 2
+    
+    # variant 2 #
     import numpy as np
 
     window=3
     array = np.array([-8,-7,-6,-5,-3,-2,-1,0,0,1,2,3,4,5,6,7])
     RH = np.ceil(array[np.where( array > 0 )]/window)
     result = np.hstack([-1*RH[::-1],0,0,RH])
+    
+    
+    # variant 3 #
+    def binlist(startlist, window):
+
+        idx = [i for i,j in enumerate(startlist) if j == 0]
+    
+        left  = startlist[:idx[0]]
+        right = startlist[idx[-1] + 1:]
+    
+        newleft  = []
+        newright = []
+    
+        counter = -1
+        for i, _ in enumerate(left[::-1], 1):
+            newleft.append(counter)
+            if i % window == 0:
+                counter -= 1
+    
+        newleft = newleft[::-1]
+    
+        counter  = 1
+        for i, _ in enumerate(right, 1):
+            newright.append(counter)
+            if i % window == 0:
+                counter += 1
+    
+        final = newleft + [0 for i in idx] + newright
+    
+        return final
     """
 
     def gold(self):
