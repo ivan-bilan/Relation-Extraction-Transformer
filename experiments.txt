@@ -1,0 +1,14 @@
+with postional binning, window 3:
+
+2018-02-14 12:36:32.458671: step 22800/45030 (epoch 16/30), loss = 0.339725 (0.041 sec/batch), lr: 1.000000
+2018-02-14 12:36:50.336218: step 23200/45030 (epoch 16/30), loss = 0.310790 (0.043 sec/batch), lr: 1.000000
+2018-02-14 12:37:08.295983: step 23600/45030 (epoch 16/30), loss = 0.167656 (0.044 sec/batch), lr: 1.000000
+2018-02-14 12:37:26.176538: step 24000/45030 (epoch 16/30), loss = 0.366856 (0.043 sec/batch), lr: 1.000000
+Evaluating on dev set...
+Precision (micro): 65.504%
+   Recall (micro): 68.617%
+       F1 (micro): 67.025%
+epoch 16: train_loss = 0.289900, dev_loss = 0.455458, dev_f1 = 0.6702
+model saved to ./saved_models/01/checkpoint_epoch_16.pt
+new best model saved.
+
