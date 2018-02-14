@@ -14,6 +14,7 @@ class DataLoader(object):
     """
     Load data from json files, preprocess and prepare batches.
     """
+
     def __init__(self, filename, batch_size, opt, vocab, evaluation=False):
         self.batch_size = batch_size
         self.opt = opt
@@ -22,7 +23,9 @@ class DataLoader(object):
 
         with open(filename) as infile:
             data = json.load(infile)
+
         data = self.preprocess(data, vocab, opt)
+
         # shuffle for training
         if not evaluation:
             indices = list(range(len(data)))
@@ -39,6 +42,7 @@ class DataLoader(object):
 
     def preprocess(self, data, vocab, opt):
         """ Preprocess the data and convert to ids. """
+
         processed = []
         for d in data:
             tokens = d['token']
@@ -54,18 +58,94 @@ class DataLoader(object):
             ner = map_to_ids(d['stanford_ner'], constant.NER_TO_ID)
             deprel = map_to_ids(d['stanford_deprel'], constant.DEPREL_TO_ID)
             l = len(tokens)
+
+            # ! position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
+            # print(subj_positions)
+            # do binning for subject positions
+            subj_positions = self.bin_positions(subj_positions, 3)
+
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
+            # do binning for object positions
+            obj_positions = self.bin_positions(obj_positions, 3)
+            # print(obj_positions)
+
             relation = constant.LABEL_TO_ID[d['relation']]
             processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, relation)]
         return processed
+
+    def bin_positions(self, startlist, bin_window=3):
+        """ put relative positions into bins """
+
+        idx = [i for i, j in enumerate(startlist) if j == 0]
+
+        left = startlist[:idx[0]]
+        right = startlist[idx[-1] + 1:]
+
+        newleft = list()
+        newright = list()
+
+        counter = 0
+        counter2 = 1
+
+        for i in left[::-1]:
+            x = -counter2
+            counter += 1
+            if counter % bin_window == 0:
+                counter2 += 1
+            newleft.append(x)
+
+        newleft = newleft[::-1]
+
+        counter = 0
+        counter2 = 1
+
+        for i in right:
+            x = counter2
+            counter += 1
+            if counter % bin_window == 0:
+                counter2 += 1
+            newright.append(x)
+
+        final = newleft + [0 for i in idx] + newright
+
+        return final
+
+
+    """
+    # trying out more performative approaches to binning:
+    
+    # variant 1
+    import numpy as np
+
+    def bin_list(l, width):
+        a = np.array(l)
+        a[a>0] = (a[a>0]+(width-1))//width
+        a[a<0] = (a[a<0])//width
+        return list(a)
+    
+    l = [i for i in range(-9,0)] + [0,0] + [i for i in range(1,10)]
+    
+    print(l)
+    print(bin_list(l,2))
+    print(bin_list(l,3))
+    print(bin_list(l,4))
+    
+    # variant 2
+    import numpy as np
+
+    window=3
+    array = np.array([-8,-7,-6,-5,-3,-2,-1,0,0,1,2,3,4,5,6,7])
+    RH = np.ceil(array[np.where( array > 0 )]/window)
+    result = np.hstack([-1*RH[::-1],0,0,RH])
+    """
 
     def gold(self):
         """ Return gold labels as a list. """
         return self.labels
 
     def __len__(self):
-        #return 50
+        # return 50
         return len(self.data)
 
     def __getitem__(self, key):
@@ -112,6 +192,11 @@ def map_to_ids(tokens, vocab):
     return ids
 
 
+def get_positions_original(start_idx, end_idx, length):
+    """ Get subj/obj position sequence. """
+    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
+
+
 def get_positions(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
     return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
@@ -119,6 +204,7 @@ def get_positions(start_idx, end_idx, length):
 
 def get_long_tensor(tokens_list, batch_size):
     """ Convert list of list of tokens to a padded LongTensor. """
+
     token_len = max(len(x) for x in tokens_list)
     tokens = torch.LongTensor(batch_size, token_len).fill_(constant.PAD_ID)
     for i, s in enumerate(tokens_list):
