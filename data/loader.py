@@ -3,6 +3,7 @@ Data loader for TACRED json files.
 """
 
 import json
+import math
 import random
 import torch
 import numpy as np
@@ -63,19 +64,46 @@ class DataLoader(object):
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             # print(subj_positions)
             # do binning for subject positions
-            subj_positions = self.bin_positions(subj_positions, 3)
+            subj_positions = self.bin_positions_abs(subj_positions)
+            # subj_positions = self.bin_positions(subj_positions, 2)
 
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
             # do binning for object positions
-            obj_positions = self.bin_positions(obj_positions, 3)
+            # print(obj_positions)
+            obj_positions = self.bin_positions_abs(obj_positions)
+            # obj_positions = self.bin_positions(obj_positions, 2)
             # print(obj_positions)
 
             relation = constant.LABEL_TO_ID[d['relation']]
             processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, relation)]
         return processed
 
+    def bin_positions_abs(self, positions_list):
+        new_list = [math.ceil(math.log(abs(x)+1, 2)) for x in positions_list]
+        new_list_final = list()
+
+        # reverse positives
+        for index, element in enumerate(new_list):
+            if element == 0:
+                # new_list_final.append(element)
+                new_list_final.extend(new_list[index:])
+                break
+            else:
+                new_element = -element
+                new_list_final.append(new_element)
+        if len(positions_list) != len(new_list_final):
+            print("Error in positional embeddings!")
+        return new_list_final
+
+    def bin_positions(self, positions_list, width):
+        a = np.array(positions_list)
+        a[a>0] = (a[a>0]+(width-1))//width
+        a[a<0] = (a[a<0])//width
+        return a.tolist()
+
+    """
     def bin_positions(self, startlist, bin_window=3):
-        """ put relative positions into bins """
+        # put relative positions into bins
 
         idx = [i for i, j in enumerate(startlist) if j == 0]
 
@@ -112,8 +140,7 @@ class DataLoader(object):
         return final
 
 
-    """
-    
+
     # trying out more performative approaches to binning:
      
     # variant 1 #
