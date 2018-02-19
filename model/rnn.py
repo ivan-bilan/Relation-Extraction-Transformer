@@ -12,7 +12,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 from utils import constant, torch_utils
-from .self_attention import SelfAttention
+from .transformer.Layers import EncoderLayer
 
 
 class RelationModel(object):
@@ -189,11 +189,20 @@ class PositionAwareRNN(nn.Module):
             self.ner_emb = nn.Embedding(len(constant.NER_TO_ID), opt['ner_dim'], padding_idx=constant.PAD_ID)
         input_size = opt['emb_dim'] + opt['pos_dim'] + opt['ner_dim']
 
-        # initial implementation
-        self.rnn = nn.LSTM(input_size, opt['hidden_dim'], opt['num_layers'], batch_first=True, dropout=opt['dropout'])
-
-        # instead of LSTM to get h, try using self-attention
-        # self.rnn = SelfAttention(opt['hidden_dim'], batch_first=True)
+        if opt["self_att"]:
+            # using self-attention instead of LSTM
+            self.rnn = EncoderLayer(
+                d_model=50,  # batch size????
+                d_inner_hid=opt['hidden_dim'],
+                n_head=8,
+                d_k=42,
+                d_v=42,
+                dropout=opt['dropout']
+            )
+        else:
+            # initial implementation with lstm
+            self.rnn = nn.LSTM(input_size, opt['hidden_dim'], opt['num_layers'], batch_first=True,
+                               dropout=opt['dropout'])
 
         self.linear = nn.Linear(opt['hidden_dim'], opt['num_class'])
 
@@ -260,16 +269,24 @@ class PositionAwareRNN(nn.Module):
             inputs += [self.ner_emb(ner)]
         inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
-        
-        # rnn
-        h0, c0 = self.zero_state(batch_size)
-        # instead of padding, you have to pack and pad in pytorch
-        # more at https://discuss.pytorch.org/t/understanding-pack-padded-sequence-and-pad-packed-sequence/4099/2
-        inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
-        outputs, (ht, ct) = self.rnn(inputs, (h0, c0))
-        outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
-        hidden = self.drop(ht[-1,:,:])  # get the outmost layer h_n
-        outputs = self.drop(outputs)
+
+        if self.opt["self_att"]:
+            # use self-attention
+            # inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
+            outputs, enc_slf_attn = self.rnn(inputs)
+            # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
+            hidden = enc_slf_attn
+            outputs = self.drop(outputs)
+        else:
+            # use rnn
+            h0, c0 = self.zero_state(batch_size)
+            # instead of padding, you have to pack and pad in pytorch
+            # more at https://discuss.pytorch.org/t/understanding-pack-padded-sequence-and-pad-packed-sequence/4099/2
+            inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
+            outputs, (ht, ct) = self.rnn(inputs, (h0, c0))
+            outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
+            hidden = self.drop(ht[-1,:,:])  # get the outmost layer h_n
+            outputs = self.drop(outputs)
         
         # attention
         if self.opt['attn']:

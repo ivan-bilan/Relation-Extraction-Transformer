@@ -17,7 +17,7 @@ from utils import torch_utils, scorer, constant, helper
 from utils.vocab import Vocab
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_dir', type=str, help='Directory of the model.', default="saved_models/00")
+parser.add_argument('--model_dir', type=str, help='Directory of the model.', default="saved_models/01_bin_window_5")
 parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')
 parser.add_argument('--dataset', type=str, default='test', help="Evaluate on dev or test.")
@@ -72,4 +72,3 @@ if len(args.out) > 0:
     print("Prediction scores saved to {}.".format(args.out))
 
 print("Evaluation ended.")
-
