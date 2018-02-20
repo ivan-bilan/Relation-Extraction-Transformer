@@ -192,17 +192,20 @@ class PositionAwareRNN(nn.Module):
         if opt["self_att"]:
             # using self-attention instead of LSTM
             self.rnn = EncoderLayer(
-                d_model=50,  # batch size????
+                d_model=300,  # d_model has to equal embedding size
                 d_inner_hid=opt['hidden_dim'],
                 n_head=8,
-                d_k=42,
-                d_v=42,
+                d_k=15,  # this should be d_model / hidden
+                d_v=15,  # this should be d_model / hidden
                 dropout=opt['dropout']
             )
         else:
             # initial implementation with lstm
-            self.rnn = nn.LSTM(input_size, opt['hidden_dim'], opt['num_layers'], batch_first=True,
-                               dropout=opt['dropout'])
+            self.rnn = nn.LSTM(
+                input_size, opt['hidden_dim'],
+                opt['num_layers'], batch_first=True,
+                dropout=opt['dropout']
+            )
 
         self.linear = nn.Linear(opt['hidden_dim'], opt['num_class'])
 
@@ -267,13 +270,18 @@ class PositionAwareRNN(nn.Module):
             inputs += [self.pos_emb(pos)]
         if self.opt['ner_dim'] > 0:
             inputs += [self.ner_emb(ner)]
-        inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
+
+        if self.opt["self_att"]:
+            # don't do word dropout
+            inputs = torch.cat(inputs, dim=2)  # cat - concatenates seq
+        else:
+            inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
 
         if self.opt["self_att"]:
             # use self-attention
             # inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
-            outputs, enc_slf_attn = self.rnn(inputs)
+            outputs, enc_slf_attn = self.rnn(inputs, masks)
             # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
             hidden = enc_slf_attn
             outputs = self.drop(outputs)
