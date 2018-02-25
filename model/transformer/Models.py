@@ -6,9 +6,8 @@ import transformer.Constants as Constants
 from transformer.Modules import BottleLinear as Linear
 from transformer.Layers import EncoderLayer, DecoderLayer
 
-__author__ = "Yu-Hsiang Huang"
 
-
+# TODO: this is not used in the model yet!
 def position_encoding_init(n_position, d_pos_vec):
     ''' Init the sinusoid position encoding table '''
 
@@ -17,18 +16,26 @@ def position_encoding_init(n_position, d_pos_vec):
         [pos / np.power(10000, 2 * (j // 2) / d_pos_vec) for j in range(d_pos_vec)]
         if pos != 0 else np.zeros(d_pos_vec) for pos in range(n_position)])
 
-    position_enc[1:, 0::2] = np.sin(position_enc[1:, 0::2]) # dim 2i
-    position_enc[1:, 1::2] = np.cos(position_enc[1:, 1::2]) # dim 2i+1
+    position_enc[1:, 0::2] = np.sin(position_enc[1:, 0::2])  # dim 2i
+    position_enc[1:, 1::2] = np.cos(position_enc[1:, 1::2])  # dim 2i+1
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
+# TODO: no masking used in final model
 def get_attn_padding_mask(seq_q, seq_k):
-    ''' Indicate the padding-related part to mask '''
+    """
+    Indicate the padding-related part to mask
+    :param seq_q: 
+    :param seq_k: 
+    :return:
+    """
+
     assert seq_q.dim() == 2 and seq_k.dim() == 2
     mb_size, len_q = seq_q.size()
     mb_size, len_k = seq_k.size()
-    pad_attn_mask = seq_k.data.eq(Constants.PAD).unsqueeze(1)   # bx1xsk
-    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k) # bxsqxsk
+    pad_attn_mask = seq_k.data.eq(Constants.PAD).unsqueeze(1)    # b x 1 x sk
+    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
+
     return pad_attn_mask
 
 
@@ -76,9 +83,13 @@ class Encoder(nn.Module):
 
         enc_output = enc_input
         enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq)
+
+        # iterate over encoder layers
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
-                enc_output, slf_attn_mask=enc_slf_attn_mask)
+                enc_output, slf_attn_mask=enc_slf_attn_mask
+            )
+
             if return_attns:
                 enc_slf_attns += [enc_slf_attn]
 
@@ -154,14 +165,17 @@ class Transformer(nn.Module):
             dropout=0.1, proj_share_weight=True, embs_share_weight=True):
 
         super(Transformer, self).__init__()
+
         self.encoder = Encoder(
             n_src_vocab, n_max_seq, n_layers=n_layers, n_head=n_head,
             d_word_vec=d_word_vec, d_model=d_model,
             d_inner_hid=d_inner_hid, dropout=dropout)
+
         self.decoder = Decoder(
             n_tgt_vocab, n_max_seq, n_layers=n_layers, n_head=n_head,
             d_word_vec=d_word_vec, d_model=d_model,
             d_inner_hid=d_inner_hid, dropout=dropout)
+
         self.tgt_word_proj = Linear(d_model, n_tgt_vocab, bias=False)
         self.dropout = nn.Dropout(dropout)
 

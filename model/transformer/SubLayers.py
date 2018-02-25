@@ -8,8 +8,6 @@ from .Modules import ScaledDotProductAttention
 # from transformer.Modules import BottleLayerNormalization as LayerNormalization
 from .Modules import LayerNormalization
 
-__author__ = "Yu-Hsiang Huang"
-
 
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
@@ -52,12 +50,12 @@ class MultiHeadAttention(nn.Module):
         v_s = v.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_v) x d_model
 
         # treat the result as a (n_head * mb_size) size batch
-        q_s = torch.bmm(q_s, self.w_qs).view(-1, len_q, d_k)   # (n_head*mb_size) x len_q x d_k
-        k_s = torch.bmm(k_s, self.w_ks).view(-1, len_k, d_k)   # (n_head*mb_size) x len_k x d_k
-        v_s = torch.bmm(v_s, self.w_vs).view(-1, len_v, d_v)   # (n_head*mb_size) x len_v x d_v
+        q_s = torch.bmm(q_s, self.w_qs).view(-1, len_q, d_k)    # (n_head*mb_size) x len_q x d_k
+        k_s = torch.bmm(k_s, self.w_ks).view(-1, len_k, d_k)    # (n_head*mb_size) x len_k x d_k
+        v_s = torch.bmm(v_s, self.w_vs).view(-1, len_v, d_v)    # (n_head*mb_size) x len_v x d_v
 
         # perform attention, result size = (n_head * mb_size) x len_q x d_v
-        if attn_mask:
+        if attn_mask is not None:
             outputs, attns = self.attention(q_s, k_s, v_s, attn_mask=attn_mask.repeat(n_head, 1, 1))
         else:
             outputs, attns = self.attention(q_s, k_s, v_s)
@@ -92,4 +90,4 @@ class PositionwiseFeedForward(nn.Module):
         output = self.w_2(w1_output).transpose(2, 1)
         output = self.dropout(output)
 
-        return self.layer_norm(output + residual), w1_output
+        return self.layer_norm(output + residual)

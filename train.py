@@ -151,8 +151,7 @@ for epoch in range(1, opt['num_epoch']+1):
         os.remove(model_file)
     
     # lr schedule
-    if len(dev_f1_history) > 10 and dev_f1 <= dev_f1_history[-1] and \
-            opt['optim'] in ['sgd', 'adagrad']:
+    if len(dev_f1_history) > 10 and dev_f1 <= dev_f1_history[-1] and opt['optim'] in ['sgd', 'adagrad']:
         current_lr *= opt['lr_decay']
         model.update_lr(current_lr)
 

@@ -213,14 +213,21 @@ class PositionAwareRNN(nn.Module):
         if opt["self_att"] is True:
             print("using self-attention 2")
             # using self-attention instead of LSTM
-            self.rnn = EncoderLayer(
+            self.self_attention_encoder = EncoderLayer(
                 d_model=input_size,  # d_model has to equal embedding size
                 d_inner_hid=360,  # opt['hidden_dim']
                 n_head=6,
-                d_k=50,  # this should be d_model / hidden
-                d_v=50,  # this should be d_model / hidden
+                d_k=50,  # this should be d_model / n_heads
+                d_v=50,  # this should be d_model / n_heads
                 dropout=opt['dropout']
             )
+
+            # also try out multi-layered encoder
+            n_layers = 2
+            self.layer_stack = nn.ModuleList([
+                EncoderLayer(input_size, 360, 6, 50, 50, dropout=opt['dropout'])
+                for _ in range(n_layers)])
+
         else:
             # initial implementation with lstm
             self.rnn = nn.LSTM(
@@ -318,30 +325,47 @@ class PositionAwareRNN(nn.Module):
         # hidden: torch.Size([50, 200]) # batch size, hidden size
         # outputs: torch.Size([50, 74, 200])
 
+        multi_layer_encoder = True
         if self.opt["self_att"] is True:
-            # print("using self-attention")
-            # use self-attention
-            # inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
 
-            outputs, enc_slf_attn, w1_layer = self.rnn(inputs)  # masks
-            # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
+            if multi_layer_encoder is True:
+                # TODO: try masking and positional encoding from Models.py!!!
+                # save inputs under outputs var, since it will be reused in the
+                # multi-layered encoder as input
+                outputs = inputs
 
-            # hidden should be of size --> batch_size x hidden_size (e.i. 50x200) !!!!!!!!!!!!!
-            hidden = outputs  # outputs  # F.max_pool1d(outputs, kernel_size=outputs.size()[-1])
+                enc_slf_attns = []
+                for enc_layer in self.layer_stack:
+                    outputs, enc_slf_attn = enc_layer(outputs)
+                    enc_slf_attns += [enc_slf_attn]
+                    hidden = outputs
 
-            """
-            print("inputs")
-            print(type(inputs))
-            print(inputs.size())
-            print("hidden")
-            print(type(hidden))
-            print(hidden.size())
-            print("outputs")
-            print(type(outputs))
-            print(outputs.size())
-            """
-            
-            outputs = self.drop(outputs)
+            else:
+                # print("using self-attention")
+                # use self-attention
+                # inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
+
+                outputs, enc_slf_attn = self.self_attention_encoder(inputs)  # masks
+                # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
+
+                # hidden should be of size --> batch_size x hidden_size (e.i. 50x200) !!!!!!!!!!!!!
+                hidden = outputs  # outputs  # F.max_pool1d(outputs, kernel_size=outputs.size()[-1])
+
+                """
+                print("inputs")
+                print(type(inputs))
+                print(inputs.size())
+                print("hidden")
+                print(type(hidden))
+                print(hidden.size())
+                print("outputs")
+                print(type(outputs))
+                print(outputs.size())
+                """
+
+                # do we need word dropout here???
+                # word dropout is used for inputs for both LSTM and Pos. Attention
+                # outputs = self.drop(outputs)
 
         else:
             # use rnn
@@ -358,13 +382,15 @@ class PositionAwareRNN(nn.Module):
             outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
             hidden = self.drop(ht[-1,:,:])  # get the outmost layer h_n
 
+            """
             print("hidden")
             print(type(hidden))
             print(hidden.size())
             print("outputs")
             print(type(outputs))
             print(outputs.size())
-            
+            """
+
             outputs = self.drop(outputs)
         
         # attention
