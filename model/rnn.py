@@ -109,9 +109,10 @@ class PositionAwareAttention(nn.Module):
     where x is the input, q is the query, and f is additional position features.
     """
 
-    def __init__(self, input_size, query_size, feature_size, attn_size):
+    def __init__(self, input_size, query_size, feature_size, attn_size, opt):
         super(PositionAwareAttention, self).__init__()
 
+        self.opt = opt
         self.input_size = input_size
         self.query_size = query_size
         self.feature_size = feature_size
@@ -128,6 +129,7 @@ class PositionAwareAttention(nn.Module):
         self.init_weights()
 
     def init_weights(self):
+
         self.ulinear.weight.data.normal_(std=0.001)
         self.vlinear.weight.data.normal_(std=0.001)
         if self.wlinear is not None:
@@ -135,6 +137,7 @@ class PositionAwareAttention(nn.Module):
         self.tlinear.weight.data.zero_()  # use zero to give uniform attention at the beginning
 
     def forward(self, x, x_mask, q, f):
+
         """
         x : batch_size * seq_len * input_size
         q : batch_size * query_size
@@ -146,9 +149,27 @@ class PositionAwareAttention(nn.Module):
         x_proj = self.ulinear(x.contiguous().view(-1, self.input_size)).view(
             batch_size, seq_len, self.attn_size)
 
-        q_proj = self.vlinear(q.view(-1, self.query_size)).contiguous().view(
-            batch_size, self.attn_size).unsqueeze(1).expand(
+
+        # q_proj done step by step here to catch errors better
+        # info on view and unsqueeze - https://discuss.pytorch.org/t/what-is-the-difference-between-view-and-unsqueeze/1155
+
+        if self.opt["self_att"] is True:
+            # using self-attention
+            q_proj = self.ulinear(q.contiguous().view(-1, self.query_size)).view(
             batch_size, seq_len, self.attn_size)
+        else:
+            # using LSTM
+            q_proj = self.vlinear(q.view(-1, self.query_size)).contiguous().view(batch_size, self.attn_size).expand(
+                batch_size, seq_len, self.attn_size
+            )
+            """
+            # q.size = 50x200
+            q_proj = self.vlinear(q.view(-1, self.query_size))  # 50x200
+            q_proj = q_proj.contiguous()  # 50x200
+            q_proj = q_proj.view(batch_size, self.attn_size)  # <-- this is were size error happens  # 50x200
+            q_proj = q_proj.unsqueeze(1)  # 50x200
+            q_proj = q_proj.expand(batch_size, seq_len, self.attn_size)  # 50x91x200 batch x seq_size x hidden size
+            """
 
         if self.wlinear is not None:
             f_proj = self.wlinear(f.view(-1, self.feature_size)).contiguous().view(
@@ -189,14 +210,15 @@ class PositionAwareRNN(nn.Module):
             self.ner_emb = nn.Embedding(len(constant.NER_TO_ID), opt['ner_dim'], padding_idx=constant.PAD_ID)
         input_size = opt['emb_dim'] + opt['pos_dim'] + opt['ner_dim']
 
-        if opt["self_att"]:
+        if opt["self_att"] is True:
+            print("using self-attention 2")
             # using self-attention instead of LSTM
             self.rnn = EncoderLayer(
-                d_model=300,  # d_model has to equal embedding size
-                d_inner_hid=opt['hidden_dim'],
-                n_head=8,
-                d_k=15,  # this should be d_model / hidden
-                d_v=15,  # this should be d_model / hidden
+                d_model=input_size,  # d_model has to equal embedding size
+                d_inner_hid=360,  # opt['hidden_dim']
+                n_head=6,
+                d_k=50,  # this should be d_model / hidden
+                d_v=50,  # this should be d_model / hidden
                 dropout=opt['dropout']
             )
         else:
@@ -210,12 +232,23 @@ class PositionAwareRNN(nn.Module):
         self.linear = nn.Linear(opt['hidden_dim'], opt['num_class'])
 
         if opt['attn']:
-            self.attn_layer = PositionAwareAttention(
-                opt['hidden_dim'],
-                opt['hidden_dim'],
-                2*opt['pe_dim'],
-                opt['attn_dim']
-            )
+
+            if opt['self_att'] is True:
+                self.attn_layer = PositionAwareAttention(
+                    360,
+                    360,
+                    2 * opt['pe_dim'],
+                    360,
+                    opt
+                )
+            else:
+                self.attn_layer = PositionAwareAttention(
+                    opt['hidden_dim'],
+                    opt['hidden_dim'],
+                    2*opt['pe_dim'],
+                    opt['attn_dim'],
+                    opt
+                )
             self.pe_emb = nn.Embedding(constant.MAX_LEN * 2 + 1, opt['pe_dim'])
 
         self.opt = opt
@@ -271,38 +304,78 @@ class PositionAwareRNN(nn.Module):
         if self.opt['ner_dim'] > 0:
             inputs += [self.ner_emb(ner)]
 
-        if self.opt["self_att"]:
+        if self.opt["self_att"] is True:
+            # print("using self-attention")
             # don't do word dropout
+            # inputs = self.drop(torch.cat(inputs, dim=2))
             inputs = torch.cat(inputs, dim=2)  # cat - concatenates seq
         else:
             inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
 
-        if self.opt["self_att"]:
+        # 
+        # inputs: torch.Size([50, 74, 360])  # 2nd element is variable
+        # hidden: torch.Size([50, 200]) # batch size, hidden size
+        # outputs: torch.Size([50, 74, 200])
+
+        if self.opt["self_att"] is True:
+            # print("using self-attention")
             # use self-attention
             # inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
-            outputs, enc_slf_attn = self.rnn(inputs, masks)
+
+            outputs, enc_slf_attn, w1_layer = self.rnn(inputs)  # masks
             # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
-            hidden = enc_slf_attn
+
+            # hidden should be of size --> batch_size x hidden_size (e.i. 50x200) !!!!!!!!!!!!!
+            hidden = outputs  # outputs  # F.max_pool1d(outputs, kernel_size=outputs.size()[-1])
+
+            """
+            print("inputs")
+            print(type(inputs))
+            print(inputs.size())
+            print("hidden")
+            print(type(hidden))
+            print(hidden.size())
+            print("outputs")
+            print(type(outputs))
+            print(outputs.size())
+            """
+            
             outputs = self.drop(outputs)
+
         else:
             # use rnn
             h0, c0 = self.zero_state(batch_size)
+            print("inputs")
+            print(type(inputs))
+            print(inputs.size())
+            
             # instead of padding, you have to pack and pad in pytorch
             # more at https://discuss.pytorch.org/t/understanding-pack-padded-sequence-and-pad-packed-sequence/4099/2
             inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
+
             outputs, (ht, ct) = self.rnn(inputs, (h0, c0))
             outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
             hidden = self.drop(ht[-1,:,:])  # get the outmost layer h_n
+
+            print("hidden")
+            print(type(hidden))
+            print(hidden.size())
+            print("outputs")
+            print(type(outputs))
+            print(outputs.size())
+            
             outputs = self.drop(outputs)
         
         # attention
         if self.opt['attn']:
+
             # convert all negative PE numbers to positive indices
             # e.g., -2 -1 0 1 will be mapped to 98 99 100 101
             subj_pe_inputs = self.pe_emb(subj_pos + constant.MAX_LEN)
             obj_pe_inputs = self.pe_emb(obj_pos + constant.MAX_LEN)
             pe_features = torch.cat((subj_pe_inputs, obj_pe_inputs), dim=2)
+
             final_hidden = self.attn_layer(outputs, masks, hidden, pe_features)
         else:
             final_hidden = hidden

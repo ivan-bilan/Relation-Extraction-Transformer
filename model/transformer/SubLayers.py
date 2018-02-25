@@ -47,9 +47,9 @@ class MultiHeadAttention(nn.Module):
         mb_size, len_v, d_model = v.size()
 
         # treat as a (n_head) size batch
-        q_s = q.repeat(n_head, 1, 1).view(n_head, -1, d_model) # n_head x (mb_size*len_q) x d_model
-        k_s = k.repeat(n_head, 1, 1).view(n_head, -1, d_model) # n_head x (mb_size*len_k) x d_model
-        v_s = v.repeat(n_head, 1, 1).view(n_head, -1, d_model) # n_head x (mb_size*len_v) x d_model
+        q_s = q.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_q) x d_model
+        k_s = k.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_k) x d_model
+        v_s = v.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_v) x d_model
 
         # treat the result as a (n_head * mb_size) size batch
         q_s = torch.bmm(q_s, self.w_qs).view(-1, len_q, d_k)   # (n_head*mb_size) x len_q x d_k
@@ -57,7 +57,10 @@ class MultiHeadAttention(nn.Module):
         v_s = torch.bmm(v_s, self.w_vs).view(-1, len_v, d_v)   # (n_head*mb_size) x len_v x d_v
 
         # perform attention, result size = (n_head * mb_size) x len_q x d_v
-        outputs, attns = self.attention(q_s, k_s, v_s, attn_mask=attn_mask.repeat(n_head, 1, 1))
+        if attn_mask:
+            outputs, attns = self.attention(q_s, k_s, v_s, attn_mask=attn_mask.repeat(n_head, 1, 1))
+        else:
+            outputs, attns = self.attention(q_s, k_s, v_s)
 
         # back to original mb_size batch, result size = mb_size x len_q x (n_head*d_v)
         outputs = torch.cat(torch.split(outputs, mb_size, dim=0), dim=-1) 
@@ -74,15 +77,19 @@ class PositionwiseFeedForward(nn.Module):
 
     def __init__(self, d_hid, d_inner_hid, dropout=0.1):
         super(PositionwiseFeedForward, self).__init__()
+
         self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1) # position-wise
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1) # position-wise
+
         self.layer_norm = LayerNormalization(d_hid)
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
 
     def forward(self, x):
+
         residual = x
-        output = self.relu(self.w_1(x.transpose(1, 2)))
-        output = self.w_2(output).transpose(2, 1)
+        w1_output = self.relu(self.w_1(x.transpose(1, 2)))
+        output = self.w_2(w1_output).transpose(2, 1)
         output = self.dropout(output)
-        return self.layer_norm(output + residual)
+
+        return self.layer_norm(output + residual), w1_output

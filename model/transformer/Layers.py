@@ -22,8 +22,8 @@ class EncoderLayer(nn.Module):
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask
         )
 
-        enc_output = self.pos_ffn(enc_output)
-        return enc_output, enc_slf_attn
+        enc_output, w1_layer = self.pos_ffn(enc_output)
+        return enc_output, enc_slf_attn, w1_layer
 
 
 class DecoderLayer(nn.Module):
@@ -31,6 +31,7 @@ class DecoderLayer(nn.Module):
 
     def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
         super(DecoderLayer, self).__init__()
+
         self.slf_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
         self.enc_attn = MultiHeadAttention(n_head, d_model, d_k, d_v, dropout=dropout)
         self.pos_ffn = PositionwiseFeedForward(d_model, d_inner_hid, dropout=dropout)
