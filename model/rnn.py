@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 from utils import constant, torch_utils
 from .transformer.Layers import EncoderLayer
+from .transformer.Models import get_attn_padding_mask, position_encoding_init, get_attn_subsequent_mask
 
 
 class RelationModel(object):
@@ -224,9 +225,7 @@ class PositionAwareRNN(nn.Module):
 
             # also try out multi-layered encoder
             n_layers = 2
-            self.layer_stack = nn.ModuleList([
-                EncoderLayer(input_size, 360, 6, 50, 50, dropout=opt['dropout'])
-                for _ in range(n_layers)])
+            self.layer_stack = nn.ModuleList([self.self_attention_encoder for _ in range(n_layers)])
 
         else:
             # initial implementation with lstm
@@ -256,6 +255,7 @@ class PositionAwareRNN(nn.Module):
                     opt['attn_dim'],
                     opt
                 )
+
             self.pe_emb = nn.Embedding(constant.MAX_LEN * 2 + 1, opt['pe_dim'])
 
         self.opt = opt
@@ -320,30 +320,34 @@ class PositionAwareRNN(nn.Module):
             inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
 
-        # 
         # inputs: torch.Size([50, 74, 360])  # 2nd element is variable
         # hidden: torch.Size([50, 200]) # batch size, hidden size
         # outputs: torch.Size([50, 74, 200])
 
-        multi_layer_encoder = True
+        multi_layer_encoder = False
         if self.opt["self_att"] is True:
 
+            # TODO: this doesn't work, returns 100% prec, 0 Rec. 0 Fscore
             if multi_layer_encoder is True:
-                # TODO: try masking and positional encoding from Models.py!!!
+
+                # TODO: try masking and positional encoding using stuff in Models.py!!!
                 # save inputs under outputs var, since it will be reused in the
                 # multi-layered encoder as input
                 outputs = inputs
 
-                enc_slf_attns = []
                 for enc_layer in self.layer_stack:
-                    outputs, enc_slf_attn = enc_layer(outputs)
-                    enc_slf_attns += [enc_slf_attn]
-                    hidden = outputs
+                    outputs, _ = enc_layer(outputs)
+
+                # take hidden as one layer encoder
+                hidden, _ = self.self_attention_encoder(inputs)
 
             else:
                 # print("using self-attention")
                 # use self-attention
                 # inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
+
+                # TODO: masking doesn't work!
+                # enc_slf_attn_mask = get_attn_padding_mask(inputs, inputs)
 
                 outputs, enc_slf_attn = self.self_attention_encoder(inputs)  # masks
                 # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
@@ -370,9 +374,9 @@ class PositionAwareRNN(nn.Module):
         else:
             # use rnn
             h0, c0 = self.zero_state(batch_size)
-            print("inputs")
-            print(type(inputs))
-            print(inputs.size())
+            # print("inputs")
+            # print(type(inputs))
+            # print(inputs.size())
             
             # instead of padding, you have to pack and pad in pytorch
             # more at https://discuss.pytorch.org/t/understanding-pack-padded-sequence-and-pad-packed-sequence/4099/2
@@ -380,7 +384,7 @@ class PositionAwareRNN(nn.Module):
 
             outputs, (ht, ct) = self.rnn(inputs, (h0, c0))
             outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
-            hidden = self.drop(ht[-1,:,:])  # get the outmost layer h_n
+            hidden = self.drop(ht[-1, :, :])  # get the outmost layer h_n
 
             """
             print("hidden")

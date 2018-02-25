@@ -2,9 +2,9 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import transformer.Constants as Constants
-from transformer.Modules import BottleLinear as Linear
-from transformer.Layers import EncoderLayer, DecoderLayer
+from .Constants import *
+from .Modules import BottleLinear as Linear
+from .Layers import EncoderLayer, DecoderLayer
 
 
 # TODO: this is not used in the model yet!
@@ -30,10 +30,12 @@ def get_attn_padding_mask(seq_q, seq_k):
     :return:
     """
 
+    # what is this about??? doesn't assert on our model!!!
     assert seq_q.dim() == 2 and seq_k.dim() == 2
+
     mb_size, len_q = seq_q.size()
     mb_size, len_k = seq_k.size()
-    pad_attn_mask = seq_k.data.eq(Constants.PAD).unsqueeze(1)    # b x 1 x sk
+    pad_attn_mask = seq_k.data.eq(PAD).unsqueeze(1)    # b x 1 x sk
     pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
 
     return pad_attn_mask
@@ -63,10 +65,10 @@ class Encoder(nn.Module):
         self.n_max_seq = n_max_seq
         self.d_model = d_model
 
-        self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=Constants.PAD)
+        self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
-        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=Constants.PAD)
+        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout)
@@ -87,7 +89,8 @@ class Encoder(nn.Module):
         # iterate over encoder layers
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
-                enc_output, slf_attn_mask=enc_slf_attn_mask
+                enc_output,
+                slf_attn_mask=enc_slf_attn_mask
             )
 
             if return_attns:
@@ -111,11 +114,11 @@ class Decoder(nn.Module):
         self.d_model = d_model
 
         self.position_enc = nn.Embedding(
-            n_position, d_word_vec, padding_idx=Constants.PAD)
+            n_position, d_word_vec, padding_idx=PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
         self.tgt_word_emb = nn.Embedding(
-            n_tgt_vocab, d_word_vec, padding_idx=Constants.PAD)
+            n_tgt_vocab, d_word_vec, padding_idx=PAD)
         self.dropout = nn.Dropout(dropout)
 
         self.layer_stack = nn.ModuleList([
@@ -140,6 +143,7 @@ class Decoder(nn.Module):
             dec_slf_attns, dec_enc_attns = [], []
 
         dec_output = dec_input
+
         for dec_layer in self.layer_stack:
             dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
                 dec_output, enc_output,
