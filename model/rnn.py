@@ -71,7 +71,7 @@ class RelationModel(object):
         self.model.eval()
         logits, _ = self.model(inputs)
         loss = self.criterion(logits, labels)
-        probs = F.softmax(logits).data.cpu().numpy().tolist()
+        probs = F.softmax(logits, dim=-1).data.cpu().numpy().tolist()
         predictions = np.argmax(logits.data.cpu().numpy(), axis=1).tolist()
         if unsort:
             _, predictions, probs = [list(t) for t in zip(*sorted(zip(orig_idx, predictions, probs)))]
@@ -79,9 +79,19 @@ class RelationModel(object):
         return predictions, probs, loss.data[0]
 
     def update_lr(self, new_lr):
+        """
+        Update learning rate of the optimizer
+        :param new_lr: new learning rate
+        """
         torch_utils.change_lr(self.optimizer, new_lr)
 
     def save(self, filename, epoch):
+        """
+        Save the model to a file
+        :param filename:
+        :param epoch:
+        :return:
+        """
         params = {
                 'model': self.model.state_dict(),
                 'config': self.opt,
@@ -138,7 +148,6 @@ class PositionAwareAttention(nn.Module):
         self.tlinear.weight.data.zero_()  # use zero to give uniform attention at the beginning
 
     def forward(self, x, x_mask, q, f):
-
         """
         x : batch_size * seq_len * input_size
         q : batch_size * query_size
@@ -150,31 +159,32 @@ class PositionAwareAttention(nn.Module):
         x_proj = self.ulinear(x.contiguous().view(-1, self.input_size)).view(
             batch_size, seq_len, self.attn_size)
 
-
-        # q_proj done step by step here to catch errors better
-        # info on view and unsqueeze - https://discuss.pytorch.org/t/what-is-the-difference-between-view-and-unsqueeze/1155
-
         if self.opt["self_att"] is True:
-            # using self-attention
-            q_proj = self.ulinear(q.contiguous().view(-1, self.query_size)).view(
-            batch_size, seq_len, self.attn_size)
+            # when using vlinear, the fscore is much lover! fcore=~58% compared to ~61,5% otherwise
+            # using ulinear for now instead
+            q_proj = self.ulinear(q.contiguous().view(-1, self.query_size)).view(batch_size, seq_len, self.attn_size)
         else:
             # using LSTM
             q_proj = self.vlinear(q.view(-1, self.query_size)).contiguous().view(batch_size, self.attn_size).expand(
                 batch_size, seq_len, self.attn_size
             )
+
             """
+            # q_proj done step by step here to catch errors better
+            # info on view and unsqueeze - https://discuss.pytorch.org/t/what-is-the-difference-between-view-and-unsqueeze/1155
+
             # q.size = 50x200
             q_proj = self.vlinear(q.view(-1, self.query_size))  # 50x200
             q_proj = q_proj.contiguous()  # 50x200
             q_proj = q_proj.view(batch_size, self.attn_size)  # <-- this is were size error happens  # 50x200
-            q_proj = q_proj.unsqueeze(1)  # 50x200
+            q_proj = q_proj.unsqueeze(1)  # 50x200, adds new dimension
             q_proj = q_proj.expand(batch_size, seq_len, self.attn_size)  # 50x91x200 batch x seq_size x hidden size
             """
 
         if self.wlinear is not None:
             f_proj = self.wlinear(f.view(-1, self.feature_size)).contiguous().view(
-                batch_size, seq_len, self.attn_size)
+                batch_size, seq_len, self.attn_size
+            )
             projs = [x_proj, q_proj, f_proj]
         else:
             projs = [x_proj, q_proj]
@@ -185,7 +195,7 @@ class PositionAwareAttention(nn.Module):
 
         # mask padding
         scores.data.masked_fill_(x_mask.data, -float('inf'))
-        weights = F.softmax(scores)
+        weights = F.softmax(scores, dim=-1)
 
         # weighted average input vectors
         outputs = weights.unsqueeze(1).bmm(x).squeeze(1)
@@ -198,26 +208,31 @@ class PositionAwareRNN(nn.Module):
 
     def __init__(self, opt, emb_matrix=None):
         super(PositionAwareRNN, self).__init__()
+
         self.drop = nn.Dropout(opt['dropout'])
         self.emb = nn.Embedding(opt['vocab_size'], opt['emb_dim'], padding_idx=constant.PAD_ID)
 
         # part of speech embeddings
         if opt['pos_dim'] > 0:
-            self.pos_emb = nn.Embedding(len(constant.POS_TO_ID), opt['pos_dim'],
-                    padding_idx=constant.PAD_ID)
+            self.pos_emb = nn.Embedding(
+                len(constant.POS_TO_ID), opt['pos_dim'],
+                padding_idx=constant.PAD_ID
+            )
 
         # ner embeddings
         if opt['ner_dim'] > 0:
             self.ner_emb = nn.Embedding(len(constant.NER_TO_ID), opt['ner_dim'], padding_idx=constant.PAD_ID)
+
+        # add all embedding sizes to have the final input size
         input_size = opt['emb_dim'] + opt['pos_dim'] + opt['ner_dim']
 
         if opt["self_att"] is True:
-            print("using self-attention 2")
+            print("using self-attention")
             # using self-attention instead of LSTM
             self.self_attention_encoder = EncoderLayer(
                 d_model=input_size,  # d_model has to equal embedding size
-                d_inner_hid=360,  # opt['hidden_dim']
-                n_head=6,
+                d_inner_hid=360,  # opt['hidden_dim']  # 360
+                n_head=6,  # number of heads
                 d_k=50,  # this should be d_model / n_heads
                 d_v=50,  # this should be d_model / n_heads
                 dropout=opt['dropout']
@@ -228,10 +243,12 @@ class PositionAwareRNN(nn.Module):
             self.layer_stack = nn.ModuleList([self.self_attention_encoder for _ in range(n_layers)])
 
         else:
-            # initial implementation with lstm
+            # initial implementation with LSTM
             self.rnn = nn.LSTM(
-                input_size, opt['hidden_dim'],
-                opt['num_layers'], batch_first=True,
+                input_size,
+                opt['hidden_dim'],
+                opt['num_layers'],
+                batch_first=True,
                 dropout=opt['dropout']
             )
 
@@ -241,19 +258,19 @@ class PositionAwareRNN(nn.Module):
 
             if opt['self_att'] is True:
                 self.attn_layer = PositionAwareAttention(
-                    360,
-                    360,
-                    2 * opt['pe_dim'],
-                    360,
-                    opt
+                    input_size=360,  # 360, hidden_dim
+                    query_size=360,  # 360, hidden_dim
+                    feature_size=2 * opt['pe_dim'],
+                    attn_size=360,   # 360, attn_dim
+                    opt=opt
                 )
             else:
                 self.attn_layer = PositionAwareAttention(
-                    opt['hidden_dim'],
-                    opt['hidden_dim'],
-                    2*opt['pe_dim'],
-                    opt['attn_dim'],
-                    opt
+                    input_size=opt['hidden_dim'],
+                    query_size=opt['hidden_dim'],
+                    feature_size=2*opt['pe_dim'],
+                    attn_size=opt['attn_dim'],
+                    opt=opt
                 )
 
             self.pe_emb = nn.Embedding(constant.MAX_LEN * 2 + 1, opt['pe_dim'])
@@ -265,6 +282,7 @@ class PositionAwareRNN(nn.Module):
         self.init_weights()
     
     def init_weights(self):
+
         if self.emb_matrix is None:
             self.emb.weight.data[1:,:].uniform_(-1.0, 1.0)  # keep padding dimension to be 0
         else:
@@ -290,7 +308,10 @@ class PositionAwareRNN(nn.Module):
         else:
             print("Finetune all embeddings.")
 
-    def zero_state(self, batch_size): 
+    def zero_state(self, batch_size):
+        """
+        Initialize zero states for LSTM's hidden layer and cell
+        """
         state_shape = (self.opt['num_layers'], batch_size, self.opt['hidden_dim'])
         h0 = c0 = Variable(torch.zeros(*state_shape), requires_grad=False)
         if self.use_cuda:
@@ -299,6 +320,7 @@ class PositionAwareRNN(nn.Module):
             return h0, c0
     
     def forward(self, inputs):
+
         words, masks, pos, ner, deprel, subj_pos, obj_pos = inputs  # unpack
         seq_lens = list(masks.data.eq(constant.PAD_ID).long().sum(1).squeeze())
         batch_size = words.size()[0]
@@ -319,10 +341,6 @@ class PositionAwareRNN(nn.Module):
         else:
             inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
-
-        # inputs: torch.Size([50, 74, 360])  # 2nd element is variable
-        # hidden: torch.Size([50, 200]) # batch size, hidden size
-        # outputs: torch.Size([50, 74, 200])
 
         multi_layer_encoder = False
         if self.opt["self_att"] is True:
@@ -372,6 +390,11 @@ class PositionAwareRNN(nn.Module):
                 # outputs = self.drop(outputs)
 
         else:
+            # for original LSTM
+            # inputs: torch.Size([50, 74, 360])  # 2nd element is variable
+            # hidden: torch.Size([50, 200]) # batch size, hidden size
+            # outputs: torch.Size([50, 74, 200])
+
             # use rnn
             h0, c0 = self.zero_state(batch_size)
             # print("inputs")

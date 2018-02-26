@@ -17,7 +17,7 @@ from utils import torch_utils, scorer, constant, helper
 from utils.vocab import Vocab
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model_dir', type=str, help='Directory of the model.', default="saved_models/04_self_attention_no_drop_out")
+parser.add_argument('--model_dir', type=str, help='Directory of the model.', default="saved_models/06_self_attention")
 parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')
 parser.add_argument('--dataset', type=str, default='test', help="Evaluate on dev or test.")

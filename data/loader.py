@@ -17,6 +17,7 @@ class DataLoader(object):
     """
 
     def __init__(self, filename, batch_size, opt, vocab, evaluation=False):
+
         self.batch_size = batch_size
         self.opt = opt
         self.vocab = vocab
@@ -32,6 +33,7 @@ class DataLoader(object):
             indices = list(range(len(data)))
             random.shuffle(indices)
             data = [data[i] for i in indices]
+
         id2label = dict([(v,k) for k,v in constant.LABEL_TO_ID.items()])
         self.labels = [id2label[d[-1]] for d in data] 
         self.num_examples = len(data)
@@ -49,6 +51,7 @@ class DataLoader(object):
             tokens = d['token']
             if opt['lower']:
                 tokens = [t.lower() for t in tokens]
+
             # anonymize tokens
             ss, se = d['subj_start'], d['subj_end']
             os, oe = d['obj_start'], d['obj_end']
@@ -60,17 +63,17 @@ class DataLoader(object):
             deprel = map_to_ids(d['stanford_deprel'], constant.DEPREL_TO_ID)
             l = len(tokens)
 
-            # ! position relative to Subject and Object are calculated here
+            # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             # print(subj_positions)
             # do binning for subject positions
-            subj_positions = self.bin_positions_abs(subj_positions)
+            subj_positions = self.relativate_word_positions(subj_positions)
             # subj_positions = self.bin_positions(subj_positions, 2)
 
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
             # do binning for object positions
             # print(obj_positions)
-            obj_positions = self.bin_positions_abs(obj_positions)
+            obj_positions = self.relativate_word_positions(obj_positions)
             # obj_positions = self.bin_positions(obj_positions, 2)
             # print(obj_positions)
 
@@ -78,7 +81,16 @@ class DataLoader(object):
             processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, relation)]
         return processed
 
-    def bin_positions_abs(self, positions_list):
+    def relativate_word_positions(self, positions_list):
+        """
+
+        Recalculate the word positions by decreasing their relativeness based on the distance to
+        query or object:
+        e.g. input=[0,1,2,3,4,5,5,6] --> output=[0,1,2,3,3,4,4,4]
+
+        :param positions_list: list of word positions relative to the query or object
+        :return: new positions
+        """
         new_list = [math.ceil(math.log(abs(x)+1, 2)) for x in positions_list]
         new_list_final = list()
 
@@ -96,108 +108,20 @@ class DataLoader(object):
         return new_list_final
 
     def bin_positions(self, positions_list, width):
+        """
+
+        Recalculate the word positions binning them given a binning distance:
+        e.g. input=[-4,-3,-3,-2,-2,-1,-1,0,0,1,1,2,2,3,3,4] and window=3
+              --> output=[-3,-2,-2,-2,-1,-1,-1,0,0,1,1,1,2,2,2,3]
+
+        :param positions_list: list of word positions relative to the query or object
+        :param width: width of the bin window
+        :return: new positions
+        """
         a = np.array(positions_list)
         a[a>0] = (a[a>0]+(width-1))//width
         a[a<0] = (a[a<0])//width
         return a.tolist()
-
-    """
-    def bin_positions(self, startlist, bin_window=3):
-        # put relative positions into bins
-
-        idx = [i for i, j in enumerate(startlist) if j == 0]
-
-        left = startlist[:idx[0]]
-        right = startlist[idx[-1] + 1:]
-
-        newleft = list()
-        newright = list()
-
-        counter = 0
-        counter2 = 1
-
-        for i in left[::-1]:
-            x = -counter2
-            counter += 1
-            if counter % bin_window == 0:
-                counter2 += 1
-            newleft.append(x)
-
-        newleft = newleft[::-1]
-
-        counter = 0
-        counter2 = 1
-
-        for i in right:
-            x = counter2
-            counter += 1
-            if counter % bin_window == 0:
-                counter2 += 1
-            newright.append(x)
-
-        final = newleft + [0 for i in idx] + newright
-
-        return final
-
-
-
-    # trying out more performative approaches to binning:
-     
-    # variant 1 #
-    import numpy as np
-
-    def bin_list(l, width):
-        a = np.array(l)
-        a[a>0] = (a[a>0]+(width-1))//width
-        a[a<0] = (a[a<0])//width
-        return list(a)
-    
-    l = [i for i in range(-9,0)] + [0,0] + [i for i in range(1,10)]
-    
-    print(l)
-    print(bin_list(l,2))
-    print(bin_list(l,3))
-    print(bin_list(l,4))
-    
-    
-    # variant 2 #
-    import numpy as np
-
-    window=3
-    array = np.array([-8,-7,-6,-5,-3,-2,-1,0,0,1,2,3,4,5,6,7])
-    RH = np.ceil(array[np.where( array > 0 )]/window)
-    result = np.hstack([-1*RH[::-1],0,0,RH])
-    
-    
-    # variant 3 #
-    def binlist(startlist, window):
-
-        idx = [i for i,j in enumerate(startlist) if j == 0]
-    
-        left  = startlist[:idx[0]]
-        right = startlist[idx[-1] + 1:]
-    
-        newleft  = []
-        newright = []
-    
-        counter = -1
-        for i, _ in enumerate(left[::-1], 1):
-            newleft.append(counter)
-            if i % window == 0:
-                counter -= 1
-    
-        newleft = newleft[::-1]
-    
-        counter  = 1
-        for i, _ in enumerate(right, 1):
-            newright.append(counter)
-            if i % window == 0:
-                counter += 1
-    
-        final = newleft + [0 for i in idx] + newright
-    
-        return final
-    """
 
     def gold(self):
         """ Return gold labels as a list. """
