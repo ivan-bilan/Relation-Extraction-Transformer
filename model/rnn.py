@@ -13,6 +13,7 @@ import torch.nn.functional as F
 
 from utils import constant, torch_utils
 from .transformer.Layers import EncoderLayer
+from .transformer.Models import Encoder
 from .transformer.Models import get_attn_padding_mask, position_encoding_init, get_attn_subsequent_mask
 
 
@@ -171,7 +172,8 @@ class PositionAwareAttention(nn.Module):
 
             """
             # q_proj done step by step here to catch errors better
-            # info on view and unsqueeze - https://discuss.pytorch.org/t/what-is-the-difference-between-view-and-unsqueeze/1155
+            # info on view and unsqueeze - 
+            # https://discuss.pytorch.org/t/what-is-the-difference-between-view-and-unsqueeze/1155
 
             # q.size = 50x200
             q_proj = self.vlinear(q.view(-1, self.query_size))  # 50x200
@@ -219,28 +221,47 @@ class PositionAwareRNN(nn.Module):
                 padding_idx=constant.PAD_ID
             )
 
-        # ner embeddings
+        # NER embeddings
         if opt['ner_dim'] > 0:
             self.ner_emb = nn.Embedding(len(constant.NER_TO_ID), opt['ner_dim'], padding_idx=constant.PAD_ID)
 
         # add all embedding sizes to have the final input size
         input_size = opt['emb_dim'] + opt['pos_dim'] + opt['ner_dim']
 
+        # using encoder from Transformer.Models instead
+        using_transformer_encoder = False
         if opt["self_att"] is True:
-            print("using self-attention")
-            # using self-attention instead of LSTM
-            self.self_attention_encoder = EncoderLayer(
-                d_model=input_size,  # d_model has to equal embedding size
-                d_inner_hid=360,  # opt['hidden_dim']  # 360
-                n_head=6,  # number of heads
-                d_k=50,  # this should be d_model / n_heads
-                d_v=50,  # this should be d_model / n_heads
-                dropout=opt['dropout']
-            )
 
-            # also try out multi-layered encoder
-            n_layers = 2
-            self.layer_stack = nn.ModuleList([self.self_attention_encoder for _ in range(n_layers)])
+            if using_transformer_encoder is True:
+                print("using self-attention and transformer encoder")
+                # using self-attention instead of LSTM
+                self.self_attention_encoder = Encoder(
+                    n_src_vocab=55950,   # vocab size
+                    n_max_seq=96,        # max sequence length in the dataset
+                    n_layers=1,          # 1 works, more fails with 0 recall
+                    d_word_vec=360,
+                    d_model=input_size,  # d_model has to equal embedding size
+                    d_inner_hid=360,  # opt['hidden_dim']  # 360
+                    n_head=6,  # number of heads
+                    d_k=50,  # this should be d_model / n_heads
+                    d_v=50,  # this should be d_model / n_heads
+                    dropout=opt['dropout']
+                )
+            else:
+                print("using self-attention")
+                # using self-attention instead of LSTM
+                self.self_attention_encoder = EncoderLayer(
+                    d_model=input_size,  # d_model has to equal embedding size
+                    d_inner_hid=360,  # opt['hidden_dim']  # 360
+                    n_head=6,  # number of heads
+                    d_k=50,  # this should be d_model / n_heads
+                    d_v=50,  # this should be d_model / n_heads
+                    dropout=opt['dropout']
+                )
+
+                # also try out multi-layered encoder
+                # n_layers = 2
+                # self.layer_stack = nn.ModuleList([self.self_attention_encoder for _ in range(n_layers)])
 
         else:
             # initial implementation with LSTM
@@ -289,9 +310,9 @@ class PositionAwareRNN(nn.Module):
             self.emb_matrix = torch.from_numpy(self.emb_matrix)
             self.emb.weight.data.copy_(self.emb_matrix)
         if self.opt['pos_dim'] > 0:
-            self.pos_emb.weight.data[1:,:].uniform_(-1.0, 1.0)
+            self.pos_emb.weight.data[1:, :].uniform_(-1.0, 1.0)
         if self.opt['ner_dim'] > 0:
-            self.ner_emb.weight.data[1:,:].uniform_(-1.0, 1.0)
+            self.ner_emb.weight.data[1:, :].uniform_(-1.0, 1.0)
 
         self.linear.bias.data.fill_(0)
         init.xavier_uniform(self.linear.weight, gain=1)  # initialize linear layer
@@ -342,7 +363,8 @@ class PositionAwareRNN(nn.Module):
             inputs = self.drop(torch.cat(inputs, dim=2))  # add dropout to input # cat - concatenates seq
         input_size = inputs.size(2)
 
-        multi_layer_encoder = False
+        # this is experimental, use the Encoder Model above
+        multi_layer_encoder = False   # <-- use the Encoder Model instead
         if self.opt["self_att"] is True:
 
             # TODO: this doesn't work, returns 100% prec, 0 Rec. 0 Fscore
@@ -367,7 +389,8 @@ class PositionAwareRNN(nn.Module):
                 # TODO: masking doesn't work!
                 # enc_slf_attn_mask = get_attn_padding_mask(inputs, inputs)
 
-                outputs, enc_slf_attn = self.self_attention_encoder(inputs)  # masks
+                # TODO: no positional encodings are used right now!
+                outputs, enc_slf_attn = self.self_attention_encoder(inputs)  # subj_pos, masks
                 # outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
 
                 # hidden should be of size --> batch_size x hidden_size (e.i. 50x200) !!!!!!!!!!!!!
@@ -422,7 +445,6 @@ class PositionAwareRNN(nn.Module):
         
         # attention
         if self.opt['attn']:
-
             # convert all negative PE numbers to positive indices
             # e.g., -2 -1 0 1 will be mapped to 98 99 100 101
             subj_pe_inputs = self.pe_emb(subj_pos + constant.MAX_LEN)

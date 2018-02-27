@@ -47,8 +47,16 @@ class DataLoader(object):
         """ Preprocess the data and convert to ids. """
 
         processed = []
+        # max_sequence_length = 0 # it's 96 now
+
         for d in data:
             tokens = d['token']
+
+            # get max sequence length
+            # if max_sequence_length <= len(d['token']):
+            #    max_sequence_length = len(d['token'])
+
+            # lowercase all tokens
             if opt['lower']:
                 tokens = [t.lower() for t in tokens]
 
@@ -79,6 +87,7 @@ class DataLoader(object):
 
             relation = constant.LABEL_TO_ID[d['relation']]
             processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, relation)]
+
         return processed
 
     def relativate_word_positions(self, positions_list):

@@ -68,29 +68,38 @@ class Encoder(nn.Module):
         self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
-        self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
+        # this is for self-learned embeddings?
+        # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
+        # TODO: leads to 100% prec, 0 Recall ! if we have more than 1 layer!
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout)
             for _ in range(n_layers)])
 
-    def forward(self, src_seq, src_pos, return_attns=False):
+    def forward(self, src_seq, src_pos=False, return_attns=True):
+        # what is str_pos????
+        # original use: https://github.com/jadore801120/attention-is-all-you-need-pytorch
+
+        # this is for self-learned embeddings???
         # Word embedding look up
-        enc_input = self.src_word_emb(src_seq)
+        # enc_input = self.src_word_emb(src_seq)
 
         # Position Encoding addition
-        enc_input += self.position_enc(src_pos)
+        # TODO: this is not working! what should be the input???
+        # print(src_pos)
+        # src_seq += self.position_enc(src_pos)
+
         if return_attns:
             enc_slf_attns = []
 
-        enc_output = enc_input
-        enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq)
+        enc_output = src_seq
+        # enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq)
 
         # iterate over encoder layers
         for enc_layer in self.layer_stack:
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
-                slf_attn_mask=enc_slf_attn_mask
+                slf_attn_mask=None  # enc_slf_attn_mask
             )
 
             if return_attns:
