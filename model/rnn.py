@@ -54,6 +54,7 @@ class RelationModel(object):
         torch.nn.utils.clip_grad_norm(self.model.parameters(), self.opt['max_grad_norm'])
         self.optimizer.step()
         loss_val = loss.data[0]
+
         return loss_val
 
     def predict(self, batch, unsort=True):
@@ -348,6 +349,7 @@ class PositionAwareRNN(nn.Module):
         
         # embedding lookup
         word_inputs = self.emb(words)
+
         inputs = [word_inputs]
         if self.opt['pos_dim'] > 0:
             inputs += [self.pos_emb(pos)]
@@ -429,6 +431,7 @@ class PositionAwareRNN(nn.Module):
             inputs = nn.utils.rnn.pack_padded_sequence(inputs, seq_lens, batch_first=True)
 
             outputs, (ht, ct) = self.rnn(inputs, (h0, c0))
+            # retrieve original sequence after doing pack_padded_sequence
             outputs, output_lens = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
             hidden = self.drop(ht[-1, :, :])  # get the outmost layer h_n
 
