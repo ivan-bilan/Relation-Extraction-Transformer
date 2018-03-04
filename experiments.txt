@@ -1213,7 +1213,65 @@ Evaluation ended.
 
 
 
-######################################
+###########################################
+# self-attention with positional encodings
+###########################################
+
+# folder: 09_self_attention_high_recall
+really high recall of 72%
+# dropout 0.4, rest in the folder
+
+Per-relation statistics:
+org:alternate_names                  P:  27.06%  R:  84.30%  F1:  40.96%  #: 242
+org:city_of_headquarters             P:  39.55%  R:  92.55%  F1:  55.41%  #: 94
+org:country_of_headquarters          P:  31.13%  R:  95.93%  F1:  47.01%  #: 123
+org:dissolved                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 4
+org:founded                          P:  75.56%  R:  72.34%  F1:  73.91%  #: 47
+org:founded_by                       P: 100.00%  R:   0.00%  F1:   0.00%  #: 89
+org:member_of                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 36
+org:members                          P: 100.00%  R:   0.00%  F1:   0.00%  #: 41
+org:number_of_employees/members      P: 100.00%  R:   4.55%  F1:   8.70%  #: 22
+org:parents                          P:   8.55%  R:  52.63%  F1:  14.71%  #: 76
+org:political/religious_affiliation  P:  26.67%  R:  47.06%  F1:  34.04%  #: 17
+org:shareholders                     P: 100.00%  R:   0.00%  F1:   0.00%  #: 15
+org:stateorprovince_of_headquarters  P:  44.95%  R:  84.48%  F1:  58.68%  #: 58
+org:subsidiaries                     P: 100.00%  R:   0.00%  F1:   0.00%  #: 52
+org:top_members/employees            P:  36.05%  R:  93.15%  F1:  51.98%  #: 409
+org:website                          P:  53.23%  R:  91.67%  F1:  67.35%  #: 36
+per:age                              P:  49.41%  R:  93.68%  F1:  64.70%  #: 269
+per:alternate_names                  P: 100.00%  R:   0.00%  F1:   0.00%  #: 13
+per:cause_of_death                   P:  42.86%  R:  82.76%  F1:  56.47%  #: 58
+per:charges                          P:  43.40%  R:  36.80%  F1:  39.83%  #: 125
+per:children                         P:  12.39%  R:  68.29%  F1:  20.97%  #: 41
+per:cities_of_residence              P:  35.73%  R:  76.82%  F1:  48.77%  #: 233
+per:city_of_birth                    P:  10.26%  R:  44.44%  F1:  16.67%  #: 9
+per:city_of_death                    P:  46.15%  R:  16.67%  F1:  24.49%  #: 36
+per:countries_of_residence           P:  32.55%  R:  89.95%  F1:  47.80%  #: 199
+per:country_of_birth                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 9
+per:country_of_death                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 16
+per:date_of_birth                    P:  35.29%  R:  60.00%  F1:  44.44%  #: 10
+per:date_of_death                    P:  38.98%  R:  37.10%  F1:  38.02%  #: 62
+per:employee_of                      P:  28.23%  R:  98.29%  F1:  43.87%  #: 351
+per:origin                           P:  41.64%  R:  86.59%  F1:  56.24%  #: 164
+per:other_family                     P:  15.15%  R:   5.68%  F1:   8.26%  #: 88
+per:parents                          P:  36.36%  R:   3.60%  F1:   6.56%  #: 111
+per:religion                         P:  41.38%  R: 100.00%  F1:  58.54%  #: 60
+per:schools_attended                 P:  36.00%  R:  24.32%  F1:  29.03%  #: 37
+per:siblings                         P:   0.00%  R:   0.00%  F1:   0.00%  #: 69
+per:spouse                           P:  16.24%  R:  43.84%  F1:  23.70%  #: 73
+per:stateorprovince_of_birth         P:  38.46%  R:  45.45%  F1:  41.67%  #: 11
+per:stateorprovince_of_death         P:  25.00%  R:  13.33%  F1:  17.39%  #: 15
+per:stateorprovinces_of_residence    P:  37.95%  R:  76.29%  F1:  50.68%  #: 97
+per:title                            P:  53.90%  R:  99.36%  F1:  69.89%  #: 626
+
+Final Score:
+Calculating Precision: correct_by_relation= 3026.0 / guessed_by_relation= 8609.0
+Calculating Recall: correct_by_relation= 3026.0 / gold_by_relation= 4143.0
+only_non_relation: 4143.0
+Precision (micro): 35.149%
+   Recall (micro): 73.039%
+       F1 (micro): 47.459%
+Evaluation ended.
 
 
-attention attn_size=100
+#####################################

@@ -23,12 +23,13 @@ def score(key, prediction, verbose=False):
     correct_by_relation = Counter()
     guessed_by_relation = Counter()
     gold_by_relation    = Counter()
+    only_non_relation = Counter()
 
     # Loop over the data to compute a score
     for row in range(len(key)):
         gold = key[row]
         guess = prediction[row]
-         
+
         if gold == NO_RELATION and guess == NO_RELATION:
             pass
         elif gold == NO_RELATION and guess != NO_RELATION:
@@ -36,6 +37,7 @@ def score(key, prediction, verbose=False):
         elif gold != NO_RELATION and guess == NO_RELATION:
             gold_by_relation[gold] += 1
         elif gold != NO_RELATION and guess != NO_RELATION:
+            only_non_relation[gold] += 1
             guessed_by_relation[guess] += 1
             gold_by_relation[gold] += 1
             if gold == guess:
@@ -92,6 +94,24 @@ def score(key, prediction, verbose=False):
     f1_micro = 0.0
     if prec_micro + recall_micro > 0.0:
         f1_micro = 2.0 * prec_micro * recall_micro / (prec_micro + recall_micro)
+
+    print(
+        "Calculating Precision:",
+        "correct_by_relation=",
+        float(sum(correct_by_relation.values())),
+        "/",
+        "guessed_by_relation=",
+        float(sum(guessed_by_relation.values()))
+    )
+    print(
+        "Calculating Recall:",
+        "correct_by_relation=",
+        float(sum(correct_by_relation.values())),
+        "/",
+        "gold_by_relation=",
+        float(sum(gold_by_relation.values()))
+    )
+    print("only_non_relation:", float(sum(gold_by_relation.values())))
     print( "Precision (micro): {:.3%}".format(prec_micro) )
     print( "   Recall (micro): {:.3%}".format(recall_micro) )
     print( "       F1 (micro): {:.3%}".format(f1_micro) )

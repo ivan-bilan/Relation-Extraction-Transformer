@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
 
-__author__ = "Yu-Hsiang Huang"
-
 
 class Linear(nn.Module):
     ''' Simple Linear layer with xavier init '''
@@ -38,6 +36,7 @@ class BottleSoftmax(Bottle, nn.Softmax):
     pass
 
 
+# TODO: try batch normalization as well!
 class LayerNormalization(nn.Module):
     ''' Layer normalization module '''
 
@@ -89,7 +88,15 @@ class ScaledDotProductAttention(nn.Module):
 
         attn = torch.bmm(q, k.transpose(1, 2)) / self.temper
 
+        # print(attn)
+        # print(type(attn), attn.size())
+
+        # print(attn_mask)
+        # attn_mask = None
+
         if attn_mask is not None:
+            # print(attn_mask)
+            # print(attn_mask.size(), attn.size())
 
             assert attn_mask.size() == attn.size(), \
                     'Attention mask shape {} mismatch ' \

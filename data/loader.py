@@ -10,6 +10,8 @@ import numpy as np
 
 from utils import constant, helper, vocab
 
+PAD = 0
+
 
 class DataLoader(object):
     """
@@ -41,6 +43,7 @@ class DataLoader(object):
         # chunk into batches
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
+
         print("{} batches created for {}".format(len(data), filename))
 
     def preprocess(self, data, vocab, opt):
@@ -65,11 +68,20 @@ class DataLoader(object):
             os, oe = d['obj_start'], d['obj_end']
             tokens[ss:se+1] = ['SUBJ-'+d['subj_type']] * (se-ss+1)
             tokens[os:oe+1] = ['OBJ-'+d['obj_type']] * (oe-os+1)
+
+            # TODO: try using lemmas instead of plain words???
             tokens = map_to_ids(tokens, vocab.word2id)
+
             pos = map_to_ids(d['stanford_pos'], constant.POS_TO_ID)
             ner = map_to_ids(d['stanford_ner'], constant.NER_TO_ID)
             deprel = map_to_ids(d['stanford_deprel'], constant.DEPREL_TO_ID)
             l = len(tokens)
+
+            # create word positional vector for self-attention
+            inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
+
+            # print("tokens", tokens)
+            # print("inst_position", inst_position)
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
@@ -86,7 +98,7 @@ class DataLoader(object):
             # print(obj_positions)
 
             relation = constant.LABEL_TO_ID[d['relation']]
-            processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, relation)]
+            processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, inst_position, relation)]
 
         return processed
 
@@ -142,6 +154,7 @@ class DataLoader(object):
 
     def __getitem__(self, key):
         """ Get a batch with index. """
+
         if not isinstance(key, int):
             raise TypeError
         if key < 0 or key >= len(self.data):
@@ -149,7 +162,7 @@ class DataLoader(object):
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 7
+        assert len(batch) == 8
 
         # sort all fields by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -157,22 +170,33 @@ class DataLoader(object):
         
         # word dropout
         if not self.eval:
+            # TODO: experiment with this!!!!!!!!!!!!
             words = [word_dropout(sent, self.opt['word_dropout']) for sent in batch[0]]
         else:
             words = batch[0]
 
+        # get_long_tensor creates a matrix out of list of lists
+
         # convert to tensors
-        words = get_long_tensor(words, batch_size)
-        masks = torch.eq(words, 0)
-        pos = get_long_tensor(batch[1], batch_size)
-        ner = get_long_tensor(batch[2], batch_size)
-        deprel = get_long_tensor(batch[3], batch_size)
-        subj_positions = get_long_tensor(batch[4], batch_size)
-        obj_positions = get_long_tensor(batch[5], batch_size)
+        words = get_long_tensor(words, batch_size)              # matrix of tokens
+        # masks = torch.eq(words, 0)                            # ?
+        pos = get_long_tensor(batch[1], batch_size)             # matrix of part of speech embeddings
+        ner = get_long_tensor(batch[2], batch_size)             # matrix for NER embeddings
+        deprel = get_long_tensor(batch[3], batch_size)          # stanford dependancy parser stuff... not sure
+        subj_positions = get_long_tensor(batch[4], batch_size)  # matrix of positional lists relative to subject
+        obj_positions = get_long_tensor(batch[5], batch_size)   # matrix of positional lists relative to object
+        src_pos = get_long_tensor(batch[6], batch_size)         # matrix, positional ids for all words in sentence
 
-        rels = torch.LongTensor(batch[6])
+        # new masks with positional padding
+        # TODO: this is experimental, evaluate!!!
+        masks = torch.eq(words, 0)  # ?  # +src_pos
 
-        return (words, masks, pos, ner, deprel, subj_positions, obj_positions, rels, orig_idx)
+        rels = torch.LongTensor(batch[7])                       # list of relation labels for this batch
+
+        # print("words", words)
+        # print("src_pos", src_pos)
+
+        return (words, masks, pos, ner, deprel, subj_positions, obj_positions, src_pos, rels, orig_idx)
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -184,11 +208,6 @@ def map_to_ids(tokens, vocab):
     return ids
 
 
-def get_positions_original(start_idx, end_idx, length):
-    """ Get subj/obj position sequence. """
-    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
-
-
 def get_positions(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
     return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
@@ -197,8 +216,14 @@ def get_positions(start_idx, end_idx, length):
 def get_long_tensor(tokens_list, batch_size):
     """ Convert list of list of tokens to a padded LongTensor. """
 
+    # here the padding is done!!!!
+
+    # print(tokens_list)
+
     token_len = max(len(x) for x in tokens_list)
+
     tokens = torch.LongTensor(batch_size, token_len).fill_(constant.PAD_ID)
+
     for i, s in enumerate(tokens_list):
         tokens[i, :len(s)] = torch.LongTensor(s)
     return tokens
