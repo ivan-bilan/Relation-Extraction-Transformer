@@ -7,7 +7,6 @@ from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer, DecoderLayer
 
 
-# TODO: this is not used in the model yet!
 def position_encoding_init(n_position, d_pos_vec):
     ''' Init the sinusoid position encoding table '''
 
@@ -21,7 +20,7 @@ def position_encoding_init(n_position, d_pos_vec):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-# TODO: no masking used in final model
+# TODO: using this leads to P=1 R=0
 def get_attn_padding_mask(seq_q, seq_k):
     """
     Indicate the padding-related part to mask
@@ -30,14 +29,27 @@ def get_attn_padding_mask(seq_q, seq_k):
     :return:
     """
 
-    # what is this about??? doesn't assert on our model!!!
+    """
+    in the original implementation this is the input:
+    # see full example under verbose_masking_input_example.txt
+
+    # original func
+    assert seq_q.dim() == 2 and seq_k.dim() == 2
+    mb_size, len_q = seq_q.size()
+    mb_size, len_k = seq_k.size()
+    pad_attn_mask = seq_k.data.eq(Constants.PAD).unsqueeze(1)    # bx1xsk
+    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # bxsqxsk
+    return pad_attn_mask
+    """
+
     assert seq_q.dim() == 2 and seq_k.dim() == 2
 
     mb_size, len_q = seq_q.size()
     mb_size, len_k = seq_k.size()
+    # print(seq_k)
     pad_attn_mask = seq_k.data.eq(PAD).unsqueeze(1)    # b x 1 x sk
     pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
-
+    # print(pad_attn_mask)
     return pad_attn_mask
 
 
@@ -71,44 +83,38 @@ class Encoder(nn.Module):
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
-        # TODO: leads to 100% prec, 0 Recall ! if we have more than 1 layer!
+        # TODO: leads to 100% prec, 0 Recall if we have more than 1 layer!
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout)
             for _ in range(n_layers)])
 
-    def forward(self, src_seq, src_pos=False, return_attns=True):
-        # what is str_pos????
+    def forward(self, enc_non_embedded, src_seq, src_pos):
         # original use: https://github.com/jadore801120/attention-is-all-you-need-pytorch
 
-        # this is for self-learned embeddings???
-        # Word embedding look up
+        # Word embedding look up, already done in rnn.py
         # enc_input = self.src_word_emb(src_seq)
 
-        # Position Encoding addition
-        # TODO: this is not working! what should be the input???
-        # print(src_pos)
-        # src_seq += self.position_enc(src_pos)
+        # TODO: try adding vectors (word vec + pos vec) instead of just appending them
+        # TODO: also try with relative positions instead of absolute
+        # TODO: try experimenting with character-based embeddings???
+        # add positional encoding to the initial input, add emd_vec+pos_vec value by value
+        src_seq += self.position_enc(src_pos)
 
-        if return_attns:
-            enc_slf_attns = []
-
+        enc_slf_attns = []
         enc_output = src_seq
-        # enc_slf_attn_mask = get_attn_padding_mask(src_seq, src_seq)
+        # enc_slf_attn_mask = None
+        enc_slf_attn_mask = get_attn_padding_mask(enc_non_embedded, enc_non_embedded)
 
         # iterate over encoder layers
         for enc_layer in self.layer_stack:
+
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
-                slf_attn_mask=None  # enc_slf_attn_mask
+                slf_attn_mask=enc_slf_attn_mask  # enc_slf_attn_mask
             )
 
-            if return_attns:
-                enc_slf_attns += [enc_slf_attn]
-
-        if return_attns:
-            return enc_output, enc_slf_attns
-        else:
-            return enc_output,
+        enc_slf_attns += [enc_slf_attn]
+        return enc_output, enc_slf_attns
 
 
 class Decoder(nn.Module):
