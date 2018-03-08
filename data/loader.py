@@ -62,6 +62,7 @@ class DataLoader(object):
 
             # lowercase all tokens
             if opt['lower']:
+                # print("LOWERIN")
                 tokens = [t.lower() for t in tokens]
 
             # anonymize tokens

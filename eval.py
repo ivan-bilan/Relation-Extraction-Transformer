@@ -19,12 +19,15 @@ from utils.vocab import Vocab
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--model_dir', type=str, help='Directory of the model.',
-    default="saved_models/17_self_attention_dropout"
+    default="saved_models/20_self_attention_dropout"
 )
 parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')
 parser.add_argument('--dataset', type=str, default='test', help="Evaluate on dev or test.")
-parser.add_argument('--out', type=str, default='', help="Save model predictions to this dir.")
+parser.add_argument('--out', type=str,
+                    default="saved_models/out/test_3.pkl",
+                    help="Save model predictions to this dir."
+)
 parser.add_argument('--seed', type=int, default=1234)
 parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
 parser.add_argument('--cpu', action='store_true')
@@ -64,6 +67,7 @@ for i, b in enumerate(batch):
     preds, probs, _ = model.predict(b)
     predictions += preds
     all_probs += probs
+
 predictions = [id2label[p] for p in predictions]
 p, r, f1 = scorer.score(batch.gold(), predictions, verbose=True)
 

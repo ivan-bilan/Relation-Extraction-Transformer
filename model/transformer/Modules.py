@@ -36,7 +36,6 @@ class BottleSoftmax(Bottle, nn.Softmax):
     pass
 
 
-# TODO: try batch normalization as well!
 class LayerNormalization(nn.Module):
     ''' Layer normalization module '''
 

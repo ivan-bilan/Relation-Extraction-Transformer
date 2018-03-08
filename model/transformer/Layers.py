@@ -6,7 +6,6 @@ from .Constants import *
 from .SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
 
-# TODO: the original encoder has 2 layers! now we are using just one
 class EncoderLayer(nn.Module):
     """
     Compose with two layers
@@ -14,15 +13,6 @@ class EncoderLayer(nn.Module):
 
     def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
         super(EncoderLayer, self).__init__()
-
-        # the longest sentence
-        n_position = 96 + 1
-
-        # don't really need embeddings here,
-        # this was done so that they can also be trained if needed?
-        # not sure, follow this discussion: https://github.com/jadore801120/attention-is-all-you-need-pytorch/issues/33
-        # self.position_enc = nn.Embedding(n_position, d_model, padding_idx=PAD)  # here should be d_model = vec_size
-        # self.position_enc.weight.data = position_encoding_init(n_position, d_model)
 
         # attention heads
         self.slf_attn = MultiHeadAttention(
@@ -42,7 +32,7 @@ class EncoderLayer(nn.Module):
         )
 
         # do feed forward
-        enc_output = self.pos_ffn(enc_output)
+        enc_output = self.pos_ffn(enc_output, enc_input)
         return enc_output, enc_slf_attn
 
 

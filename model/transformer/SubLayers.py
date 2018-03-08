@@ -25,6 +25,8 @@ class MultiHeadAttention(nn.Module):
 
         self.attention = ScaledDotProductAttention(d_model)
         self.layer_norm = LayerNormalization(d_model)
+        # RuntimeError: running_mean should contain 91 elements not 360
+        # self.batch_norm = nn.BatchNorm1d(d_model)
         self.proj = Linear(n_head*d_v, d_model)
 
         self.dropout = nn.Dropout(dropout)
@@ -67,7 +69,7 @@ class MultiHeadAttention(nn.Module):
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
 
-        return self.layer_norm(outputs + residual), attns
+        return self.layer_norm(outputs), attns
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -80,12 +82,17 @@ class PositionwiseFeedForward(nn.Module):
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
 
         self.layer_norm = LayerNormalization(d_hid)
+        # RuntimeError: running_mean should contain 91 elements not 360
+        # self.batch_norm = nn.BatchNorm1d(d_hid)
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
 
-    def forward(self, x):
+    def forward(self, x, residual=None):
 
-        residual = x
+        # redirect the residual from the MultiHeadAttention directly to the end of FFN
+        if residual is None:
+            residual = x
+
         w1_output = self.relu(self.w_1(x.transpose(1, 2)))
         output = self.w_2(w1_output).transpose(2, 1)
         output = self.dropout(output)
