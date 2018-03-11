@@ -32,6 +32,7 @@ def main():
     print("Loading {} prediction files...".format(len(args.pred_files)))
     scores_list = []
     for path in args.pred_files:
+        print(path)
         with open(path, 'rb') as infile:
             scores = pickle.load(infile)
             scores_list += [scores]

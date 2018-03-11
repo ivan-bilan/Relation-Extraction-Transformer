@@ -1577,6 +1577,7 @@ Evaluation ended.
 ###################################
 # dropout for inputs and between attention and stanford attention
 # folder: 14_self_attention_dropout
+
 2018-03-05 20:43:09.762680: step 39200/150100 (epoch 27/100), loss = 0.110866 (0.061 sec/batch), lr: 0.053144
 2018-03-05 20:43:34.508158: step 39600/150100 (epoch 27/100), loss = 0.513278 (0.057 sec/batch), lr: 0.053144
 2018-03-05 20:43:59.345382: step 40000/150100 (epoch 27/100), loss = 0.320070 (0.052 sec/batch), lr: 0.053144
