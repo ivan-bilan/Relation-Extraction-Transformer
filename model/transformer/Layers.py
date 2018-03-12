@@ -31,8 +31,8 @@ class EncoderLayer(nn.Module):
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask
         )
 
-        # do feed forward
-        enc_output = self.pos_ffn(enc_output, enc_input)
+        # do feed forward, second is with residual
+        enc_output = self.pos_ffn(enc_output)  # enc_output = self.pos_ffn(enc_output, enc_input)
         return enc_output, enc_slf_attn
 
 

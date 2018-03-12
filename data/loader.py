@@ -220,11 +220,9 @@ def get_long_tensor(tokens_list, batch_size):
 
     token_len = max(len(x) for x in tokens_list)
 
-    # TODO: default without cuda
     tokens = torch.LongTensor(batch_size, token_len).fill_(constant.PAD_ID)
 
     for i, s in enumerate(tokens_list):
-        # TODO: default without cuda
         tokens[i, :len(s)] = torch.LongTensor(s)
     return tokens
 

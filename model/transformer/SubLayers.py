@@ -24,7 +24,10 @@ class MultiHeadAttention(nn.Module):
         self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
 
-        self.attention = ScaledDotProductAttention(d_model)
+        # TODO: test this, initially dropout was always set to 0.1!
+        scaled_dropout = dropout  # 0.4
+        self.attention = ScaledDotProductAttention(d_model, scaled_dropout)
+        # TODO: batch norm
         self.layer_norm = LayerNormalization(d_model)
         # RuntimeError: running_mean should contain 91 elements not 360
         # self.batch_norm = nn.BatchNorm1d(d_model)
@@ -70,7 +73,7 @@ class MultiHeadAttention(nn.Module):
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
 
-        return self.layer_norm(outputs), attns
+        return self.layer_norm(outputs + residual), attns
 
 
 class PositionwiseFeedForward(nn.Module):

@@ -20,7 +20,6 @@ def position_encoding_init(n_position, d_pos_vec):
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 
-# TODO: using this leads to P=1 R=0
 def get_attn_padding_mask(seq_q, seq_k):
     """
     Indicate the padding-related part to mask
