@@ -19,9 +19,10 @@ class MultiHeadAttention(nn.Module):
         self.d_k = d_k
         self.d_v = d_v
 
-        self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k))
-        self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k))
-        self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v))
+        # TODO: default without cuda
+        self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
+        self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
+        self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
 
         self.attention = ScaledDotProductAttention(d_model)
         self.layer_norm = LayerNormalization(d_model)
