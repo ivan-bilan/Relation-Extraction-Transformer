@@ -28,19 +28,6 @@ def get_attn_padding_mask(seq_q, seq_k):
     :return:
     """
 
-    """
-    in the original implementation this is the input:
-    # see full example under verbose_masking_input_example.txt
-
-    # original func
-    assert seq_q.dim() == 2 and seq_k.dim() == 2
-    mb_size, len_q = seq_q.size()
-    mb_size, len_k = seq_k.size()
-    pad_attn_mask = seq_k.data.eq(Constants.PAD).unsqueeze(1)    # bx1xsk
-    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # bxsqxsk
-    return pad_attn_mask
-    """
-
     assert seq_q.dim() == 2 and seq_k.dim() == 2
 
     mb_size, len_q = seq_q.size()
@@ -68,13 +55,16 @@ class Encoder(nn.Module):
 
     def __init__(
             self, n_src_vocab, n_max_seq, n_layers=6, n_head=8, d_k=64, d_v=64,
-            d_word_vec=512, d_model=512, d_inner_hid=1024, dropout=0.1):
+            d_word_vec=512, d_model=512, d_inner_hid=1024, dropout=0.1, scaled_dropout=0.1):
 
         super(Encoder, self).__init__()
 
         n_position = n_max_seq + 1
         self.n_max_seq = n_max_seq
         self.d_model = d_model
+
+        # make sure all dimensions are correct, based on the paper
+        assert d_word_vec == d_model
 
         self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
@@ -84,7 +74,7 @@ class Encoder(nn.Module):
 
         # TODO: leads to 100% prec, 0 Recall if we have more than 1 layer!
         self.layer_stack = nn.ModuleList([
-            EncoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout)
+            EncoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout, scaled_dropout=scaled_dropout)
             for _ in range(n_layers)])
 
     def forward(self, enc_non_embedded, src_seq, src_pos):

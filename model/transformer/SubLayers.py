@@ -12,25 +12,30 @@ from .Modules import LayerNormalization
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
-    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1):
+    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, scaled_dropout=0.1):
         super(MultiHeadAttention, self).__init__()
 
         self.n_head = n_head
         self.d_k = d_k
         self.d_v = d_v
 
-        # TODO: default without cuda
+        self.use_batch_norm = True
+
+        # TODO: default without cuda, do we need cuda call here?
         self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
         self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
 
         # TODO: test this, initially dropout was always set to 0.1!
-        scaled_dropout = dropout  # 0.4
+        # TODO: higher makes the model stable, but Recall is now much lower!
         self.attention = ScaledDotProductAttention(d_model, scaled_dropout)
-        # TODO: batch norm
-        self.layer_norm = LayerNormalization(d_model)
-        # RuntimeError: running_mean should contain 91 elements not 360
-        # self.batch_norm = nn.BatchNorm1d(d_model)
+
+        # batch norm
+        if self.use_batch_norm:
+            self.layer_norm = nn.BatchNorm1d(d_model)
+        else:
+            self.layer_norm = LayerNormalization(d_model)
+
         self.proj = Linear(n_head*d_v, d_model)
 
         self.dropout = nn.Dropout(dropout)
@@ -44,6 +49,7 @@ class MultiHeadAttention(nn.Module):
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
 
+        # we dont pass the residual in here, instead in the very end of the head
         residual = q
 
         mb_size, len_q, d_model = q.size()
@@ -73,7 +79,15 @@ class MultiHeadAttention(nn.Module):
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
 
-        return self.layer_norm(outputs + residual), attns
+        if self.use_batch_norm:
+            # batch_norm expects (batch_size, h_units, seq_len), we have (batch_s, seq_len, h_units)
+            outputs = outputs.permute(0, 2, 1)
+            # have to make everything contiguous to make it run on CUDA
+            outputs = self.layer_norm(outputs.contiguous())  # + residual
+            # move columns back
+            return outputs.permute(0, 2, 1), attns
+        else:
+            return self.layer_norm(outputs), attns  # + residual
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -82,12 +96,16 @@ class PositionwiseFeedForward(nn.Module):
     def __init__(self, d_hid, d_inner_hid, dropout=0.1):
         super(PositionwiseFeedForward, self).__init__()
 
+        self.use_batch_norm = True
+
         self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1)  # position-wise
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
 
-        self.layer_norm = LayerNormalization(d_hid)
-        # RuntimeError: running_mean should contain 91 elements not 360
-        # self.batch_norm = nn.BatchNorm1d(d_hid)
+        if self.use_batch_norm:
+            self.layer_norm = nn.BatchNorm1d(d_hid)
+        else:
+            self.layer_norm = LayerNormalization(d_hid)
+
         self.dropout = nn.Dropout(dropout)
         self.relu = nn.ReLU()
 
@@ -101,4 +119,13 @@ class PositionwiseFeedForward(nn.Module):
         output = self.w_2(w1_output).transpose(2, 1)
         output = self.dropout(output)
 
-        return self.layer_norm(output + residual)
+        if self.use_batch_norm:
+            # batch_norm expects (batch_size, h_units, seq_len), we have (batch_s, seq_len, h_units)
+            outputs = output.permute(0, 2, 1)
+            residual_permuted = residual.permute(0, 2, 1)
+            # have to make everything contiguous to make it run on CUDA
+            outputs = self.layer_norm(outputs.contiguous()+residual_permuted.contiguous())  # + residual
+            # move columns back
+            return outputs.permute(0, 2, 1)
+        else:
+            return self.layer_norm(output + residual)

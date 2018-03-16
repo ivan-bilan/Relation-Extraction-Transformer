@@ -11,12 +11,12 @@ class EncoderLayer(nn.Module):
     Compose with two layers
     """
 
-    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1):
+    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1, scaled_dropout=0.1):
         super(EncoderLayer, self).__init__()
 
         # attention heads
         self.slf_attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, dropout=dropout
+            n_head, d_model, d_k, d_v, dropout=dropout, scaled_dropout=scaled_dropout
         )
 
         # feed forward part
@@ -32,7 +32,7 @@ class EncoderLayer(nn.Module):
         )
 
         # do feed forward, second is with residual
-        enc_output = self.pos_ffn(enc_output)  # enc_output = self.pos_ffn(enc_output, enc_input)
+        enc_output = self.pos_ffn(enc_output, enc_input)  # enc_output = self.pos_ffn(enc_output, enc_input)
         return enc_output, enc_slf_attn
 
 
