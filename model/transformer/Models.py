@@ -54,8 +54,8 @@ class Encoder(nn.Module):
     ''' A encoder model with self attention mechanism. '''
 
     def __init__(
-            self, n_src_vocab, n_max_seq, n_layers=6, n_head=8, d_k=64, d_v=64,
-            d_word_vec=512, d_model=512, d_inner_hid=1024, dropout=0.1, scaled_dropout=0.1):
+            self, n_src_vocab, n_max_seq, n_layers=3, n_head=1, d_k=360, d_v=360,
+            d_word_vec=360, d_model=360, d_inner_hid=720, dropout=0.1, scaled_dropout=0.1):
 
         super(Encoder, self).__init__()
 
@@ -69,15 +69,20 @@ class Encoder(nn.Module):
         self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
+        self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+        self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+
+        self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+        self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
+
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
-        # TODO: leads to 100% prec, 0 Recall if we have more than 1 layer!
         self.layer_stack = nn.ModuleList([
             EncoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout, scaled_dropout=scaled_dropout)
             for _ in range(n_layers)])
 
-    def forward(self, enc_non_embedded, src_seq, src_pos):
+    def forward(self, enc_non_embedded, src_seq, src_pos, pe_features):
         # original use: https://github.com/jadore801120/attention-is-all-you-need-pytorch
 
         # Word embedding look up, already done in rnn.py
@@ -86,8 +91,38 @@ class Encoder(nn.Module):
         # TODO: try adding vectors (word vec + pos vec) instead of just appending them
         # TODO: also try with relative positions instead of absolute
         # TODO: try experimenting with character-based embeddings???
+
         # add positional encoding to the initial input, add emd_vec+pos_vec value by value
-        src_seq += self.position_enc(src_pos)
+        # originally we used the positional vector of the sentence from 0 to n+1
+        # src_seq += self.position_enc(src_pos)
+
+        # here we try to also add subject and object positions
+        # needs to be done in one step
+        # sub_obj_pos = self.position_enc(src_pos) + self.position_enc(pe_features[0])
+        # print("sub_obj_pos", sub_obj_pos, type(sub_obj_pos))
+        # print(pe_features[0])
+
+        # consider obj positions only, ignore subject positions
+        src_seq = src_seq + self.position_enc(src_pos) + self.position_enc2(pe_features[1]) # + self.position_enc2(pe_features[0])  # + self.position_enc3(pe_features[1]))
+        # print("src_seq", src_seq, type(src_seq))
+
+        """
+        print("self.position_enc(src_pos)", self.position_enc(src_pos), type(self.position_enc(src_pos)))
+        print("position_enc", self.position_enc(pe_features[0]), type(self.position_enc(pe_features[0])))
+        res = self.position_enc(src_pos) * self.position_enc2(pe_features[0])
+        print("res", res, type(res))
+
+        src_seq += self.position_enc(src_pos) * self.position_enc2(pe_features[0])
+        """
+
+        # src_seq += self.position_enc2(pe_features[0])
+        # src_seq += self.position_enc(pe_features[1])
+
+        # TODO: how to add sub/obj positions properly
+        # print("src_pos", src_pos, type(src_pos))
+        # print("pe_features[0]", pe_features[0], type(pe_features[0]))
+        # src_seq += self.position_enc2(pe_features[0])
+        # src_seq += self.position_enc3(pe_features[1])
 
         enc_slf_attns = []
         enc_output = src_seq

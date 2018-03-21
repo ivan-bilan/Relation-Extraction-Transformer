@@ -84,6 +84,7 @@ class DataLoader(object):
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
+
             # print(subj_positions)
             # do binning for subject positions
             subj_positions = self.relativate_word_positions(subj_positions)
@@ -98,6 +99,9 @@ class DataLoader(object):
 
             # one-hot encoding for relation classes
             relation = constant.LABEL_TO_ID[d['relation']]
+
+            # print("inst_position", inst_position, type(inst_position), inst_position)
+            # print("subj_positions", subj_positions, type(subj_positions), subj_positions)
 
             # return vector of the whole partitioned data
             processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, inst_position, relation)]
