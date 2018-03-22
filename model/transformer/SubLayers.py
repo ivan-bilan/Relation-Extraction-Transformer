@@ -12,14 +12,14 @@ from .Modules import LayerNormalization
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
-    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, scaled_dropout=0.1):
+    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, scaled_dropout=0.1, use_batch_norm=True):
         super(MultiHeadAttention, self).__init__()
 
         self.n_head = n_head
         self.d_k = d_k
         self.d_v = d_v
 
-        self.use_batch_norm = True
+        self.use_batch_norm = use_batch_norm
 
         # TODO: default without cuda, do we need cuda call here?
         self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
