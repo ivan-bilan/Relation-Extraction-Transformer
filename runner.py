@@ -52,10 +52,11 @@ parser.add_argument(
     help='Use self-attention layer instead of LSTM.', default=True
 )
 
-parser.add_argument(
-    '--obj_sub_pos', dest='obj_sub_pos', action='store_false',
-    help='In self-attention add obj/subg positional vectors.', default=True
-)
+parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true',
+    help='In self-attention add obj/subg positional vectors.', default=True)
+parser.add_argument('--use_batch_norm', dest='use_batch_norm', action='store_true',
+    help='BatchNorm if True, else LayerNorm in self-attention.', default=True)
+
 
 parser.add_argument('--n_head', type=int, default=1, help='Number of self-attention heads.')
 parser.add_argument('--attn', dest='attn', action='store_true', help='Use attention layer.', default="true")
@@ -157,7 +158,7 @@ for epoch in range(1, opt['num_epoch']+1):
     )
     print(
         " weight_no_rel-"+ str(opt["weight_no_rel"]) +
-        " weight_rest-"+ str(opt["weight_rest"]) + "attn-"+ str(opt["attn"]) +" attn_dim-"+ str(opt["attn_dim"]),
+        " weight_rest-"+ str(opt["weight_rest"]) + " attn-"+ str(opt["attn"]) +" attn_dim-"+ str(opt["attn_dim"]),
         " obj_sub_pos-"+ str(opt["obj_sub_pos"])
     )
 
