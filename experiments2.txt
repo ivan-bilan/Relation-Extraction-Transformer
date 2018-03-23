@@ -379,7 +379,7 @@ Process finished with exit code 0
 
 
 
-########## highest recall
+########## highest recall , high recall
 # 3 heads, residual, self+standord
 # epoch 31
 # folder: 20_self_attention_dropout

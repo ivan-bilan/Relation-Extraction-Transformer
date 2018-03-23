@@ -11,12 +11,16 @@ class EncoderLayer(nn.Module):
     Compose with two layers
     """
 
-    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1, scaled_dropout=0.1, use_batch_norm=True):
+    def __init__(self, d_model, d_inner_hid, n_head, d_k, d_v, dropout=0.1, scaled_dropout=0.1,
+                 use_batch_norm=True, residual_bool=False
+                 ):
+
         super(EncoderLayer, self).__init__()
 
         # attention heads
         self.slf_attn = MultiHeadAttention(
-            n_head, d_model, d_k, d_v, dropout=dropout, scaled_dropout=scaled_dropout, use_batch_norm=use_batch_norm
+            n_head, d_model, d_k, d_v, dropout=dropout, scaled_dropout=scaled_dropout,
+            use_batch_norm=use_batch_norm, residual_bool=residual_bool
         )
 
         # feed forward part

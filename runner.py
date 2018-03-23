@@ -56,7 +56,10 @@ parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true',
     help='In self-attention add obj/subg positional vectors.', default=True)
 parser.add_argument('--use_batch_norm', dest='use_batch_norm', action='store_true',
     help='BatchNorm if True, else LayerNorm in self-attention.', default=True)
-
+parser.add_argument('--relative_positions', dest='relative_positions', action='store_true',
+    help='Use relative positions for subj/obj positional vectors.', default=True)
+parser.add_argument('--new_residual', dest='new_residual', action='store_true',
+    help='Use a different residual connection than in usual self-attention.', default=True)
 
 parser.add_argument('--n_head', type=int, default=1, help='Number of self-attention heads.')
 parser.add_argument('--attn', dest='attn', action='store_true', help='Use attention layer.', default="true")
@@ -159,7 +162,8 @@ for epoch in range(1, opt['num_epoch']+1):
     print(
         " weight_no_rel-"+ str(opt["weight_no_rel"]) +
         " weight_rest-"+ str(opt["weight_rest"]) + " attn-"+ str(opt["attn"]) +" attn_dim-"+ str(opt["attn_dim"]),
-        " obj_sub_pos-"+ str(opt["obj_sub_pos"])
+        " obj_sub_pos-"+ str(opt["obj_sub_pos"]) + " new_residual-"+str(opt["new_residual"]),
+        " use_batch_norm-"+str(opt["use_batch_norm"]) + " relative_positions-"+str(opt["relative_positions"])
     )
 
     train_loss = 0

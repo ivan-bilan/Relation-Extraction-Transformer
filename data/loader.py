@@ -84,18 +84,19 @@ class DataLoader(object):
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
-
-            # print(subj_positions)
-            # do binning for subject positions
-            subj_positions = self.relativate_word_positions(subj_positions)
-            # subj_positions = self.bin_positions(subj_positions, 2)
-
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
-            # do binning for object positions
-            # print(obj_positions)
-            obj_positions = self.relativate_word_positions(obj_positions)
-            # obj_positions = self.bin_positions(obj_positions, 2)
-            # print(obj_positions)
+
+            # pass relative positional vectors
+            if opt["relative_positions"]:
+                # print(subj_positions)
+                # do binning for subject positions
+                subj_positions = self.relativate_word_positions(subj_positions)
+                # subj_positions = self.bin_positions(subj_positions, 2)
+                # do binning for object positions
+                # print(obj_positions)
+                obj_positions = self.relativate_word_positions(obj_positions)
+                # obj_positions = self.bin_positions(obj_positions, 2)
+                # print(obj_positions)
 
             # one-hot encoding for relation classes
             relation = constant.LABEL_TO_ID[d['relation']]

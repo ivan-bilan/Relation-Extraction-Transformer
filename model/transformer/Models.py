@@ -56,7 +56,7 @@ class Encoder(nn.Module):
     def __init__(
             self, n_src_vocab, n_max_seq, n_layers=3, n_head=1, d_k=360, d_v=360,
             d_word_vec=360, d_model=360, d_inner_hid=720, dropout=0.1, scaled_dropout=0.1, obj_sub_pos=False,
-            use_batch_norm=True):
+            use_batch_norm=True, residual_bool=False):
 
         super(Encoder, self).__init__()
 
@@ -93,7 +93,8 @@ class Encoder(nn.Module):
                 d_v,
                 dropout=dropout,
                 scaled_dropout=scaled_dropout,
-                use_batch_norm=use_batch_norm
+                use_batch_norm=use_batch_norm,
+                residual_bool=residual_bool
             )
             for _ in range(n_layers)])
 

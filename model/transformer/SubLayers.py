@@ -12,7 +12,10 @@ from .Modules import LayerNormalization
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
-    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, scaled_dropout=0.1, use_batch_norm=True):
+    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, scaled_dropout=0.1,
+                 use_batch_norm=True, residual_bool=False
+                 ):
+
         super(MultiHeadAttention, self).__init__()
 
         self.n_head = n_head
@@ -20,6 +23,7 @@ class MultiHeadAttention(nn.Module):
         self.d_v = d_v
 
         self.use_batch_norm = use_batch_norm
+        self.residual_bool = residual_bool
 
         # TODO: default without cuda, do we need cuda call here?
         self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
@@ -49,8 +53,9 @@ class MultiHeadAttention(nn.Module):
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
 
-        # we dont pass the residual in here, instead in the very end of the head
-        residual = q
+        # choose residual implementation
+        if self.residual_bool:
+            residual = q
 
         mb_size, len_q, d_model = q.size()
         mb_size, len_k, d_model = k.size()
@@ -83,11 +88,19 @@ class MultiHeadAttention(nn.Module):
             # batch_norm expects (batch_size, h_units, seq_len), we have (batch_s, seq_len, h_units)
             outputs = outputs.permute(0, 2, 1)
             # have to make everything contiguous to make it run on CUDA
-            outputs = self.layer_norm(outputs.contiguous())  # + residual
+            if self.residual_bool:
+                outputs = self.layer_norm(outputs.contiguous() + residual.contiguous())
+            else:
+                outputs = self.layer_norm(outputs.contiguous())
+
             # move columns back
             return outputs.permute(0, 2, 1), attns
         else:
-            return self.layer_norm(outputs), attns  # + residual
+
+            if self.residual_bool:
+                return self.layer_norm(outputs+residual), attns
+            else:
+                return self.layer_norm(outputs), attns
 
 
 class PositionwiseFeedForward(nn.Module):
@@ -111,7 +124,7 @@ class PositionwiseFeedForward(nn.Module):
 
     def forward(self, x, residual=None):
 
-        # redirect the residual from the MultiHeadAttention directly to the end of FFN
+        # redirect the residual from the MultiHeadAttention directly to the end of FFN if given one
         if residual is None:
             residual = x
 
