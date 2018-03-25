@@ -34,10 +34,9 @@ class MultiHeadAttention(nn.Module):
         # TODO: higher makes the model stable, but Recall is now much lower!
         self.attention = ScaledDotProductAttention(d_model, scaled_dropout)
 
-        # batch norm
-        if self.use_batch_norm:
+        if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)
-        else:
+        else:  # layer norm
             self.layer_norm = LayerNormalization(d_model)
 
         self.proj = Linear(n_head*d_v, d_model)
@@ -53,9 +52,7 @@ class MultiHeadAttention(nn.Module):
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
 
-        # choose residual implementation
-        if self.residual_bool:
-            residual = q
+        residual = q
 
         mb_size, len_q, d_model = q.size()
         mb_size, len_k, d_model = k.size()
@@ -84,23 +81,25 @@ class MultiHeadAttention(nn.Module):
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
 
-        if self.use_batch_norm:
+        if self.use_batch_norm:  # use batch norm
             # batch_norm expects (batch_size, h_units, seq_len), we have (batch_s, seq_len, h_units)
             outputs = outputs.permute(0, 2, 1)
+
             # have to make everything contiguous to make it run on CUDA
-            if self.residual_bool:
-                outputs = self.layer_norm(outputs.contiguous() + residual.contiguous())
-            else:
+            if self.residual_bool:  # if new residual, add it only in PFF later
                 outputs = self.layer_norm(outputs.contiguous())
+            else:  # use typical self-attention implementation
+                # TODO: make sure this actually works as it should
+                outputs = self.layer_norm(outputs.contiguous() + residual.permute(0, 2, 1).contiguous())
 
             # move columns back
             return outputs.permute(0, 2, 1), attns
-        else:
 
-            if self.residual_bool:
-                return self.layer_norm(outputs+residual), attns
-            else:
+        else:  # use layer norm
+            if self.residual_bool:  # if new residual, add it only in PFF later
                 return self.layer_norm(outputs), attns
+            else:
+                return self.layer_norm(outputs + residual), attns
 
 
 class PositionwiseFeedForward(nn.Module):

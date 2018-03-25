@@ -16,6 +16,7 @@ class EncoderLayer(nn.Module):
                  ):
 
         super(EncoderLayer, self).__init__()
+        self.residual_bool = residual_bool
 
         # attention heads
         self.slf_attn = MultiHeadAttention(
@@ -35,8 +36,12 @@ class EncoderLayer(nn.Module):
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask
         )
 
-        # do feed forward, second is with residual
-        enc_output = self.pos_ffn(enc_output, enc_input)  # enc_output = self.pos_ffn(enc_output, enc_input)
+        # do feed forward
+        if self.residual_bool:  # use new residual implementation
+            enc_output = self.pos_ffn(enc_output, enc_input)
+        else:  # typical self-attention representation
+            enc_output = self.pos_ffn(enc_output, None)
+
         return enc_output, enc_slf_attn
 
 
