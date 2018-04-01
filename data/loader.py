@@ -2,11 +2,15 @@
 Data loader for TACRED json files.
 """
 
+
+import re
 import json
 import math
 import random
 import torch
 import numpy as np
+
+from tqdm import tqdm
 
 from utils import constant, helper, vocab
 
@@ -24,6 +28,11 @@ class DataLoader(object):
         self.opt = opt
         self.vocab = vocab
         self.eval = evaluation
+
+        if opt["use_lemmas"]:
+            import spacy
+            # load the spacy model
+            self.nlp = spacy.load('en_core_web_lg')
 
         # read the json file with data
         with open(filename) as infile:
@@ -53,8 +62,13 @@ class DataLoader(object):
         processed = list()
         # max_sequence_length = 0 # it's 96 now
 
-        for d in data:
+        for i, d in enumerate(tqdm(data)):
             tokens = d['token']
+
+            # TODO: move code to a function
+
+            if opt["use_lemmas"]:
+                self.extract_lemmas(tokens, i)
 
             # get max sequence length
             # if max_sequence_length <= len(d['token']):
@@ -64,6 +78,8 @@ class DataLoader(object):
             if opt['lower']:
                 # print("LOWERIN")
                 tokens = [t.lower() for t in tokens]
+
+            # TODO: save lemmas list as pickle and load it before the for loop
 
             # anonymize tokens
             ss, se = d['subj_start'], d['subj_end']
@@ -90,10 +106,15 @@ class DataLoader(object):
             if opt["relative_positions"]:
                 # print(subj_positions)
                 # do binning for subject positions
+                # subj_positions_orig = subj_positions
+
+                # TODO: fix arguments for this
                 subj_positions = self.relativate_word_positions(subj_positions)
                 # subj_positions = self.bin_positions(subj_positions, 2)
                 # do binning for object positions
                 # print(obj_positions)
+
+                # obj_positions_orig = obj_positions
                 obj_positions = self.relativate_word_positions(obj_positions)
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)
@@ -105,7 +126,10 @@ class DataLoader(object):
             # print("subj_positions", subj_positions, type(subj_positions), subj_positions)
 
             # return vector of the whole partitioned data
-            processed += [(tokens, pos, ner, deprel, subj_positions, obj_positions, inst_position, relation)]
+            processed += [
+                (tokens, pos, ner, deprel, subj_positions, obj_positions,
+                           inst_position, relation)
+                          ]
 
         return processed
 
@@ -154,6 +178,120 @@ class DataLoader(object):
 
         return a.tolist()
 
+    def extract_lemmas(self, tokens, i):
+        init_tokens = tokens
+        # if lemma
+        # use lemmas instead of raw text
+        tokens_1_len = len(tokens)
+        # print(len(tokens))
+        # print(tokens)
+
+        tokens = u' '.join(tokens)
+        # do this twice
+        tokens = re.sub(r"(\w),?\.?-(\w)", "\g<1>_\g<2>", tokens)
+        tokens = re.sub(r"(\w),(\w)", "\g<1>_\g<2>", tokens)
+
+        tokens = re.sub(r"(\w)-+(\w)", "\g<1>_\g<2>", tokens)
+        # tokens = re.sub(r"(\w)/(\w)", "\g<1>_\g<2>", tokens)
+
+        tokens = re.sub(r"(\w)/(\w)/?(\w){,3}?/?(\w){,3}?", "\g<1>_\g<2>", tokens)
+
+        tokens = re.sub(r"(\w)\.+([\w@])", "\g<1>_\g<2>", tokens)
+        tokens = re.sub(r" '(\w)", " \g<1>", tokens)
+        tokens = re.sub(r" '(\d)", " \g<1>", tokens)  # ?
+        tokens = re.sub(r" \+(\d)", " \g<1>", tokens)
+        tokens = re.sub(r" ,(\w)", " \g<1>", tokens)
+        tokens = re.sub(r" ,(\d)", "\g<1>", tokens)
+        # tokens = re.sub(r" :(\w)", " \g<1>", tokens)
+        tokens = re.sub(r" [:#]([\d\w-])", " \g<1>", tokens)
+        tokens = re.sub(r"^[:#]([\d\w-])", "\g<1>", tokens)
+
+        tokens = re.sub(r"(\w)[:!?=](\w)", "\g<1>_\g<2>", tokens)
+        tokens = re.sub(r"(\w)[:!?=]([A-Z])", "\g<1>_\g<2>", tokens)
+        # tokens = re.sub(r"(\w)=(\w)", "\g<1>_\g<2>", tokens)
+
+        tokens = re.sub(r" <(\w)", " \g<1>", tokens)
+        tokens = re.sub(r"([\w\d])[>!?\]] ?", "\g<1> ", tokens)
+
+        tokens = re.sub(r"(\w)&(\w)", "\g<1>_\g<2>", tokens)
+        tokens = re.sub(r"([\w\d])& ", "\g<1> ", tokens)
+
+        tokens = re.sub(r"(\w)\.", "\g<1>", tokens)
+        tokens = re.sub(r"(\w)\* ", "\g<1> ", tokens)
+        tokens = re.sub(r"(\w)'", "\g<1>", tokens)
+        tokens = re.sub(r"(\w): ", "\g<1> ", tokens)
+        tokens = re.sub(r"([\w\.]); ", "\g<1> ", tokens)
+        tokens = re.sub(r"(\w)_ ", "\g<1> ", tokens)
+
+        # ;P
+        tokens = re.sub(r" ;([\d\w-])", " \g<1>", tokens)
+
+        # normalize thousands
+        tokens = re.sub(r"(\d+)K ", "\g<1>.000 ", tokens)
+        tokens = re.sub(r"(\d+)[A-Za-z][A-Za-z]? ", "\g<1> ", tokens)
+        tokens = re.sub(r"(\d+)[A-Za-z][A-Za-z]?$", "\g<1> ", tokens)
+        tokens = re.sub(r"(\d+)m+ ", "\g<1> ", tokens)
+        tokens = re.sub(r"(\d+)pm ", "\g<1> ", tokens)
+
+        # trickery TODO: fix this!
+        tokens = re.sub(r" [Ww]ed\.? ", " wedding ", tokens)
+        tokens = re.sub(r" (couldnt|wouldnt) ", " would ", tokens)
+        tokens = re.sub(r" wont ", " will ", tokens)
+        tokens = re.sub(r" cant ", " can ", tokens)
+        tokens = re.sub(r" didnt ", " did ", tokens)
+        tokens = re.sub(r" thats ", " that ", tokens)
+        tokens = re.sub(r"^thats ", "that ", tokens)
+        tokens = re.sub(r" shes ", " she ", tokens)
+        tokens = re.sub(r" hes ", " he ", tokens)
+        tokens = re.sub(r" whats ", " what ", tokens)
+        tokens = re.sub(r" wasnt ", " was ", tokens)
+        tokens = re.sub(r" whos ", " who ", tokens)
+        tokens = re.sub(r" shouldnt ", " should ", tokens)
+        tokens = re.sub(r" theres ", " there ", tokens)
+        tokens = re.sub(r" isnt ", " is ", tokens)
+
+        # TODO: ask about this on stackoverflow?
+        tokens = re.sub(r" dont ", " do ", tokens)
+        tokens = re.sub(r" doesnt ", " does ", tokens)
+
+        tokens = re.sub(r"Cant ", "Can ", tokens)
+        tokens = re.sub(r"Hes ", "He ", tokens)
+        tokens = re.sub(r"Thats ", "That ", tokens)
+
+        tokens = re.sub(r" Hed ", " He ", tokens)
+        tokens = re.sub(r" [Ii]m ", " I ", tokens)
+        tokens = re.sub(r"^[Ii]m ", "I ", tokens)
+        # tokens = re.sub(r'[\?\!]+', '.', tokens)
+
+        tokens = re.sub(r'([\!\?\*\_\=\.\#\']){1,}', '\g<1>', tokens)
+        tokens = re.sub(r"(\w)\. ", "\g<1> ", tokens)
+        tokens = re.sub(r"(\w)\# ", "\g<1> ", tokens)
+        tokens = re.sub(r"(\w)=(\w)", "\g<1>_\g<2>", tokens)
+
+        # TODO: normalize URLs amd emails?
+        # tokens = re.sub(r'\?{1,}', '?', tokens)
+
+        tokens = self.nlp(tokens)
+        # TODO: leave pronouns back in???
+        tokens = [token.lemma_ for token in tokens]
+
+        if tokens_1_len != len(tokens):
+
+            print("Current sentence index:", i)
+            print(tokens_1_len, len(tokens))
+            print(init_tokens)
+            print(tokens)
+
+            for i, element in enumerate(init_tokens):
+                if init_tokens[i] != tokens[i]:
+                    print("token:", init_tokens[i])
+                    print("posL", i)
+
+        # TODO: if assertion fails, fall back to the original sentence!!!
+        assert tokens_1_len == len(tokens)
+
+        return tokens
+
     def gold(self):
         """ Return gold labels as a list. """
         return self.labels
@@ -192,9 +330,12 @@ class DataLoader(object):
         pos = get_long_tensor(batch[1], batch_size)             # matrix of part of speech embeddings
         ner = get_long_tensor(batch[2], batch_size)             # matrix for NER embeddings
         deprel = get_long_tensor(batch[3], batch_size)          # stanford dependancy parser stuff... not sure
+
         subj_positions = get_long_tensor(batch[4], batch_size)  # matrix of positional lists relative to subject
         obj_positions = get_long_tensor(batch[5], batch_size)   # matrix of positional lists relative to object
-        src_pos = get_long_tensor(batch[6], batch_size)         # matrix, positional ids for all words in sentence
+
+        src_pos = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
+
         # new masks with positional padding
         masks = torch.eq(words, 0)  # should we also do +src_pos?
         rels = torch.LongTensor(batch[7])                       # list of relation labels for this batch

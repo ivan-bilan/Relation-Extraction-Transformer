@@ -114,7 +114,10 @@ class Encoder(nn.Module):
 
         # decide whether to add subject and object positional vectors to the normal positional vectors
         if self.obj_sub_pos:
-            src_seq = src_seq + self.position_enc(src_pos) + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
+            # original 64f score
+            # src_seq = src_seq + self.position_enc(src_pos) + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
+            src_seq = src_seq + self.position_enc2(pe_features[1])   #  + self.position_enc3(pe_features[0])
+
         else:
             src_seq += self.position_enc(src_pos)
 
