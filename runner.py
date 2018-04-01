@@ -63,8 +63,18 @@ parser.add_argument(
     help='Use self-attention layer instead of LSTM.', default=True
 )
 
-parser.add_argument('--use_lemmas', dest='use_lemmas', action='store_true',
-    help='Instead of raw text, use spacy lemmas.', default=False)
+parser.add_argument('--use_lemmas', dest='use_lemmas', action='store_true', default="true",
+    help='Instead of raw text, use spacy lemmas.')
+parser.add_argument('--no_lemmas', dest='use_lemmas', action='store_true', default="true",
+    help='Instead of raw text, use spacy lemmas.')
+parser.set_defaults(use_lemmas=False)
+
+parser.add_argument('--preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
+    help='Instead of raw text, use spacy lemmas.')
+parser.add_argument('--no_preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
+    help='Instead of raw text, use spacy lemmas.')
+parser.set_defaults(preload_lemmas=False)
+
 
 parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true', 
     help='In self-attention add obj/subg positional vectors.', default=True)

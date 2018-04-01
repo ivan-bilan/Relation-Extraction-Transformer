@@ -10,6 +10,7 @@ saved_models/
 dataset/tacred/*
 dataset/glove/*
 dataset/vocab/*
+dataset/spacy_lemmas/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

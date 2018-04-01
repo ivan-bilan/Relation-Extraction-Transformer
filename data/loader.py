@@ -6,6 +6,7 @@ Data loader for TACRED json files.
 import re
 import json
 import math
+import pickle
 import random
 import torch
 import numpy as np
@@ -46,7 +47,7 @@ class DataLoader(object):
             random.shuffle(indices)
             data = [data[i] for i in indices]
 
-        id2label = dict([(v,k) for k,v in constant.LABEL_TO_ID.items()])
+        id2label = dict([(v, k) for k, v in constant.LABEL_TO_ID.items()])
         self.labels = [id2label[d[-1]] for d in data] 
         self.num_examples = len(data)
 
@@ -62,13 +63,34 @@ class DataLoader(object):
         processed = list()
         # max_sequence_length = 0 # it's 96 now
 
+        lemmatized_tokens = list()
+
+        """
+        # with open('parrot.pkl', 'rb') as f:
+        # mynewlist = pickle.load(f)
+        """
+
+        if opt["preload_lemmas"] and opt["use_lemmas"]:
+            if len(data) == 75050 and opt["preload_lemmas"]:
+                with open('dataset/spacy_lemmas/train_lemmatized.pkl', 'rb') as f:
+                    lemmatized_tokens = pickle.load(f)
+            elif len(data) == 25764 and opt["preload_lemmas"]:
+                with open('dataset/spacy_lemmas/dev_lemmatized.pkl', 'rb') as f:
+                    lemmatized_tokens = pickle.load(f)
+            elif len(data) == 18660 and opt["preload_lemmas"]:
+                with open('dataset/spacy_lemmas/test_lemmatized.pkl', 'rb') as f:
+                    lemmatized_tokens = pickle.load(f)
+            print("loading lemmatized tokens...")
+
         for i, d in enumerate(tqdm(data)):
-            tokens = d['token']
 
-            # TODO: move code to a function
-
-            if opt["use_lemmas"]:
-                self.extract_lemmas(tokens, i)
+            if opt["preload_lemmas"] and opt["use_lemmas"]:
+                tokens = d['token']
+            elif opt["use_lemmas"] and not opt["preload_lemmas"]:
+                tokens = self.extract_lemmas(tokens, i)
+                lemmatized_tokens.append(tokens)
+            else:
+                tokens = lemmatized_tokens[i]
 
             # get max sequence length
             # if max_sequence_length <= len(d['token']):
@@ -87,7 +109,6 @@ class DataLoader(object):
             tokens[ss:se+1] = ['SUBJ-'+d['subj_type']] * (se-ss+1)
             tokens[os:oe+1] = ['OBJ-'+d['obj_type']] * (oe-os+1)
 
-            # TODO: try using lemmas instead of plain words
             tokens = map_to_ids(tokens, vocab.word2id)
 
             pos = map_to_ids(d['stanford_pos'], constant.POS_TO_ID)
@@ -130,6 +151,18 @@ class DataLoader(object):
                 (tokens, pos, ner, deprel, subj_positions, obj_positions,
                            inst_position, relation)
                           ]
+
+        # pickle spacy lemmatized text
+        if len(data) == 75050 and opt["use_lemmas"] and not opt["preload_lemmas"]:
+            print("saving to pickle...")
+            with open('dataset/spacy_lemmas/train_lemmatized.pkl', 'wb') as f:
+                pickle.dump(lemmatized_tokens, f)
+        elif len(data) == 25764 and opt["use_lemmas"] and not opt["preload_lemmas"]:
+            with open('dataset/spacy_lemmas/dev_lemmatized.pkl', 'wb') as f:
+                pickle.dump(lemmatized_tokens, f)
+        elif len(data) == 18660 and opt["use_lemmas"] and not opt["preload_lemmas"]:
+            with open('dataset/spacy_lemmas/test_lemmatized.pkl', 'wb') as f:
+                pickle.dump(lemmatized_tokens, f)
 
         return processed
 
@@ -249,6 +282,7 @@ class DataLoader(object):
         tokens = re.sub(r" shouldnt ", " should ", tokens)
         tokens = re.sub(r" theres ", " there ", tokens)
         tokens = re.sub(r" isnt ", " is ", tokens)
+        tokens = re.sub(r" werent ", " were ", tokens)
 
         # TODO: ask about this on stackoverflow?
         tokens = re.sub(r" dont ", " do ", tokens)
