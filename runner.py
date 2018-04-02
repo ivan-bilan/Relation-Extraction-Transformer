@@ -69,6 +69,7 @@ parser.add_argument('--no_lemmas', dest='use_lemmas', action='store_true', defau
     help='Instead of raw text, use spacy lemmas.')
 parser.set_defaults(use_lemmas=False)
 
+
 parser.add_argument('--preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
 parser.add_argument('--no_preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
@@ -194,11 +195,10 @@ for epoch in range(1, opt['num_epoch']+1):
         " weight_no_rel-" + str(opt["weight_no_rel"]) +
         " weight_rest-" + str(opt["weight_rest"]) + " attn-" + str(opt["attn"]) + " attn_dim-" + str(opt["attn_dim"]),
         " obj_sub_pos-" + str(opt["obj_sub_pos"]) + " new_residual-" + str(opt["new_residual"])
-
     )
     print(
         " use_batch_norm-"+str(opt["use_batch_norm"]) + " relative_positions-"+str(opt["relative_positions"]),
-        " decay_epoch-"+str(opt["decay_epoch"])
+        " decay_epoch-"+str(opt["decay_epoch"]) + " use_lemmas-"+str(opt["use_lemmas"])
     )
     
     train_loss = 0

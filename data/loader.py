@@ -30,7 +30,7 @@ class DataLoader(object):
         self.vocab = vocab
         self.eval = evaluation
 
-        if opt["use_lemmas"]:
+        if opt["use_lemmas"] and not opt["preload_lemmas"]:
             import spacy
             # load the spacy model
             self.nlp = spacy.load('en_core_web_lg')
@@ -84,12 +84,12 @@ class DataLoader(object):
 
         for i, d in enumerate(tqdm(data)):
 
-            if opt["preload_lemmas"] and opt["use_lemmas"]:
+            if not opt["preload_lemmas"] and not opt["use_lemmas"]:
                 tokens = d['token']
             elif opt["use_lemmas"] and not opt["preload_lemmas"]:
                 tokens = self.extract_lemmas(tokens, i)
                 lemmatized_tokens.append(tokens)
-            else:
+            elif opt["use_lemmas"] and opt["preload_lemmas"]:
                 tokens = lemmatized_tokens[i]
 
             # get max sequence length
