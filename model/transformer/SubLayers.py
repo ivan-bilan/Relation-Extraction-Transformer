@@ -43,9 +43,10 @@ class MultiHeadAttention(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        init.xavier_normal(self.w_qs)
-        init.xavier_normal(self.w_ks)
-        init.xavier_normal(self.w_vs)
+        # TODO: experiment with he and xavier
+        init.kaiming_normal(self.w_qs)  # xavier_normal used originally
+        init.kaiming_normal(self.w_ks)  # xavier_normal
+        init.kaiming_normal(self.w_vs)  # xavier_normal
 
     def forward(self, q, k, v, attn_mask=None):
 
@@ -119,7 +120,9 @@ class PositionwiseFeedForward(nn.Module):
             self.layer_norm = LayerNormalization(d_hid)
 
         self.dropout = nn.Dropout(dropout)
-        self.relu = nn.ReLU()
+
+        # instead of relu also tried: nn.ELU,nn.LeakyReLU, PReLU,ReLU6,RReLU,SELU
+        self.relu = nn.LeakyReLU()  # nn.ReLU()
 
     def forward(self, x, residual=None):
 

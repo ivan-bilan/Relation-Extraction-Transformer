@@ -28,6 +28,7 @@ parser.add_argument('--out', type=str,
                     default="saved_models/out/test_6.pkl",
                     help="Save model predictions to this dir."
 )
+
 parser.add_argument('--seed', type=int, default=1234)
 parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
 parser.add_argument('--cpu', action='store_true')

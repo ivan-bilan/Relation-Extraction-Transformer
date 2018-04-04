@@ -64,12 +64,6 @@ class DataLoader(object):
         # max_sequence_length = 0 # it's 96 now
 
         lemmatized_tokens = list()
-
-        """
-        # with open('parrot.pkl', 'rb') as f:
-        # mynewlist = pickle.load(f)
-        """
-
         if opt["preload_lemmas"] and opt["use_lemmas"]:
             if len(data) == 75050 and opt["preload_lemmas"]:
                 with open('dataset/spacy_lemmas/train_lemmatized.pkl', 'rb') as f:
@@ -84,9 +78,8 @@ class DataLoader(object):
 
         for i, d in enumerate(tqdm(data)):
 
-            if not opt["preload_lemmas"] and not opt["use_lemmas"]:
-                tokens = d['token']
-            elif opt["use_lemmas"] and not opt["preload_lemmas"]:
+            tokens = d['token']
+            if opt["use_lemmas"] and not opt["preload_lemmas"]:
                 tokens = self.extract_lemmas(tokens, i)
                 lemmatized_tokens.append(tokens)
             elif opt["use_lemmas"] and opt["preload_lemmas"]:
@@ -306,8 +299,10 @@ class DataLoader(object):
         # tokens = re.sub(r'\?{1,}', '?', tokens)
 
         tokens = self.nlp(tokens)
-        # TODO: leave pronouns back in???
-        tokens = [token.lemma_ for token in tokens]
+        # TODO: leave pronouns back in
+        # TODO: make it lower too
+        tokens = [tok.lemma_.lower().strip() if tok.lemma_ != "-PRON-" else tok.lower_ for tok in tokens]
+        # [token.lemma_ for token in tokens]
 
         if tokens_1_len != len(tokens):
 

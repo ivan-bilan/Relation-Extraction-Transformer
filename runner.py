@@ -111,7 +111,7 @@ parser.add_argument('--save_dir', type=str, default='./saved_models', help='Root
 
 parser.add_argument(
     '--id', type=str, 
-    default='54_self_attention_dropout',                                 # change model folder output before running
+    default='56_self_attention_dropout',                                 # change model folder output before running
     help='Model ID under which to save models.'
    )
 
@@ -189,7 +189,7 @@ for epoch in range(1, opt['num_epoch']+1):
     print(
         "Current params: " + " heads-" + str(opt["n_head"]) + " enc_layers-" + str(opt["num_layers_encoder"]),
         " drop-" + str(opt["dropout"]) + " scaled_drop-" + str(opt["scaled_dropout"]) + " lr-" + str(opt["lr"]),
-        " lr_decay-" + str(opt["lr_decay"]) + " grad_norm-" + str(opt["max_grad_norm"])
+        " lr_decay-" + str(opt["lr_decay"]) + " max_grad_norm-" + str(opt["max_grad_norm"])
     )
     print(
         " weight_no_rel-" + str(opt["weight_no_rel"]) +
