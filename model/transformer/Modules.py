@@ -81,7 +81,7 @@ class ScaledDotProductAttention(nn.Module):
         super(ScaledDotProductAttention, self).__init__()
         self.temper = np.power(d_model, 0.5)
         self.dropout = nn.Dropout(attn_dropout)
-        self.softmax = BottleSoftmax()
+        self.softmax = BottleSoftmax(dim=1)
 
     def forward(self, q, k, v, attn_mask=None):
 

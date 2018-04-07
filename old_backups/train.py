@@ -100,7 +100,7 @@ helper.print_config(opt)
 # model
 model = RelationModel(opt, emb_matrix=emb_matrix)
 
-id2label = dict([(v,k) for k,v in constant.LABEL_TO_ID.items()])
+id2label = dict([(v, k) for k, v in constant.LABEL_TO_ID.items()])
 dev_f1_history = []
 current_lr = opt['lr']
 

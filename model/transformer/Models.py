@@ -7,6 +7,7 @@ from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer, DecoderLayer
 
 
+
 def position_encoding_init(n_position, d_pos_vec):
     ''' Init the sinusoid position encoding table '''
 
@@ -17,6 +18,7 @@ def position_encoding_init(n_position, d_pos_vec):
 
     position_enc[1:, 0::2] = np.sin(position_enc[1:, 0::2])  # dim 2i
     position_enc[1:, 1::2] = np.cos(position_enc[1:, 1::2])  # dim 2i+1
+
     return torch.from_numpy(position_enc).type(torch.FloatTensor)
 
 

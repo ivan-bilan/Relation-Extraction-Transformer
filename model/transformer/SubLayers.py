@@ -121,8 +121,8 @@ class PositionwiseFeedForward(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        # instead of relu also tried: nn.ELU,nn.LeakyReLU, PReLU,ReLU6,RReLU,SELU
-        self.relu = nn.LeakyReLU()  # nn.ReLU()
+        # instead of relu also tried: ELU,LeakyReLU, PReLU,ReLU6,RReLU,SELU
+        self.relu = nn.RReLU()  # nn.ReLU() used originally
 
     def forward(self, x, residual=None):
 

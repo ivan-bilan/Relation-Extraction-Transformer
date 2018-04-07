@@ -18,7 +18,7 @@ class MyAdagrad(Optimizer):
             parameter groups
         lr (float, optional): learning rate (default: 1e-2)
         lr_decay (float, optional): learning rate decay (default: 0)
-        init_accu_value (float, optional): initial accumulater value.
+        init_accu_value (float, optional): initial accumulator value.
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
     """
 
@@ -207,17 +207,20 @@ class NAdam(Optimizer):
 ### torch specific functions
 def get_optimizer(name, parameters, lr):
     if name == 'sgd':
-        return torch.optim.SGD(parameters, lr=lr)
+        # TODO: test momentum and weight_decay
+        # 1e-07 decay? , decay is like l2, try without!!!  # weight_decay=1e-6
+        return torch.optim.SGD(parameters, lr=lr)  # bad results: weight_decay=1e-07, , momentum=0.9, nesterov=True
     elif name == 'nadam':
         return NAdam(parameters, lr=lr)
+    elif name == 'asgd':
+        return torch.optim.ASGD(parameters, lr=lr)
     elif name in ['adagrad', 'myadagrad']:
-        # use my own adagrad to allow for init accumulator value
+        # use new adagrad to allow for init accumulator value
         return MyAdagrad(parameters, lr=lr, init_accu_value=0.1)
     elif name == 'adam':
-        # TODO: don't use default lr!!!
-        return torch.optim.Adam(parameters, betas=(0.9, 0.99), lr=lr)  # use default lr
+        return torch.optim.Adam(parameters, betas=(0.9, 0.99), lr=lr)
     elif name == 'adamax':
-        return torch.optim.Adamax(parameters, lr=lr) # use default lr
+        return torch.optim.Adamax(parameters, lr=lr)
     else:
         raise Exception("Unsupported optimizer: {}".format(name))
 

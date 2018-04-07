@@ -19,7 +19,7 @@ from utils.vocab import Vocab
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--model_dir', type=str, help='Directory of the model.',
-    default="saved_models/54_self_attention_dropout/"  #   # 50_self_attention_dropout
+    default="saved_models/57_self_attention_dropout/"
 )
 parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')
@@ -46,6 +46,10 @@ elif args.cuda:
 model_file = args.model_dir + '/' + args.model
 print("Loading model from {}".format(model_file))
 opt = torch_utils.load_config(model_file)
+# TODO: are we using dropout in testing??
+# opt["dropout"] = 0.0
+# opt["scaled_dropout"] = 0.0
+
 model = RelationModel(opt)
 model.load(model_file)
 
