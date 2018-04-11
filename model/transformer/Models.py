@@ -1,11 +1,48 @@
 ''' Define the Transformer model '''
+
+import math
+import copy
 import torch
 import torch.nn as nn
 import numpy as np
 from .Constants import *
+from torch.autograd import Variable
 from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer, DecoderLayer
 
+
+class Embeddings(nn.Module):
+
+    def __init__(self, d_model, vocab):
+        super(Embeddings, self).__init__()
+        self.lut = nn.Embedding(vocab, d_model)
+        self.d_model = d_model
+
+    def forward(self, x):
+        return self.lut(x) * math.sqrt(self.d_model)
+
+
+class PositionalEncoding(nn.Module):
+    "Implement the PE function."
+
+    def __init__(self, d_model, dropout, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        # Compute the positional encodings once in log space.
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) *
+                             -(math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + Variable(self.pe[:, :x.size(1)],
+                         requires_grad=False)
+        return self.dropout(x)
 
 
 def position_encoding_init(n_position, d_pos_vec):
@@ -42,13 +79,20 @@ def get_attn_padding_mask(seq_q, seq_k):
 
 
 def get_attn_subsequent_mask(seq):
-    ''' Get an attention mask to avoid using the subsequent info.'''
+    """
+    Get an attention mask to avoid using the subsequent info.
+    :param seq:
+    :return:
+    """
     assert seq.dim() == 2
+
     attn_shape = (seq.size(0), seq.size(1), seq.size(1))
     subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
     subsequent_mask = torch.from_numpy(subsequent_mask)
+
     if seq.is_cuda:
         subsequent_mask = subsequent_mask.cuda()
+
     return subsequent_mask
 
 
@@ -83,11 +127,15 @@ class Encoder(nn.Module):
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
 
+            self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
+
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
+        # use deep copy based on:
+        # http://nlp.seas.harvard.edu/2018/04/03/attention.html
         self.layer_stack = nn.ModuleList([
-            EncoderLayer(
+            copy.deepcopy(EncoderLayer(
                 d_model,
                 d_inner_hid,
                 n_head,
@@ -97,7 +145,7 @@ class Encoder(nn.Module):
                 scaled_dropout=scaled_dropout,
                 use_batch_norm=use_batch_norm,
                 residual_bool=residual_bool
-            )
+            ))
             for _ in range(n_layers)])
 
     def forward(self, enc_non_embedded, src_seq, src_pos, pe_features):
@@ -107,8 +155,7 @@ class Encoder(nn.Module):
         # enc_input = self.src_word_emb(src_seq)
 
         # TODO: try adding vectors (word vec + pos vec) instead of just appending them
-        # TODO: also try with relative positions instead of absolute
-        # TODO: try experimenting with character-based embeddings???
+        # TODO: try experimenting with character-based embeddings?
 
         # add positional encoding to the initial input, add emd_vec+pos_vec value by value
         # originally we used the positional vector of the sentence from 0 to n+1
@@ -117,15 +164,23 @@ class Encoder(nn.Module):
         # decide whether to add subject and object positional vectors to the normal positional vectors
         if self.obj_sub_pos:
             # original 64f score
-            # src_seq = src_seq + self.position_enc(src_pos) + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
-            src_seq = src_seq + self.position_enc2(pe_features[1])   #  + self.position_enc3(pe_features[0])
+            # src_seq = src_seq + self.position_enc(src_pos)
+            # + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
+
+            # add object positions only
+            src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+
+            # new
+            # print(pe_features[1])
+            # src_seq = self.positions_enc4.forward(src_seq) # self.position_enc2(pe_features[1])  # src_seq +
 
         else:
             src_seq += self.position_enc(src_pos)
 
         enc_slf_attns = []
         enc_output = src_seq
-        # enc_slf_attn_mask = None
+
+        # add masking for attention
         enc_slf_attn_mask = get_attn_padding_mask(enc_non_embedded, enc_non_embedded)
 
         # iterate over encoder layers
@@ -133,7 +188,7 @@ class Encoder(nn.Module):
 
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
-                slf_attn_mask=enc_slf_attn_mask  # enc_slf_attn_mask
+                slf_attn_mask=enc_slf_attn_mask
             )
 
         enc_slf_attns += [enc_slf_attn]
@@ -147,6 +202,7 @@ class Decoder(nn.Module):
             d_word_vec=512, d_model=512, d_inner_hid=1024, dropout=0.1):
 
         super(Decoder, self).__init__()
+
         n_position = n_max_seq + 1
         self.n_max_seq = n_max_seq
         self.d_model = d_model

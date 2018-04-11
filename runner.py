@@ -37,19 +37,17 @@ parser.add_argument('--emb_dim', type=int, default=300, help='Word embedding dim
 parser.add_argument('--ner_dim', type=int, default=30, help='NER embedding dimension.')
 parser.add_argument('--pos_dim', type=int, default=30, help='POS embedding dimension.')
 parser.add_argument('--hidden_dim', type=int, default=360, help='RNN hidden state size.')              # 200 original
-parser.add_argument('--hidden_self', type=int, default=720,
-                    help='Hidden size for self-attention.')  # n_model*2 in the paper
+parser.add_argument('--hidden_self', type=int, default=150,
+                    help='Hidden size for self-attention.')  # n_model*2 in the paper  # used to be 720
 parser.add_argument('--query_size_attn', type=int, default=360,
                     help='Embedding for query size in the positional attention.')  # n_model*2 in the paper
-
-
 parser.add_argument('--num_layers', type=int, default=2, help='Num of lstm layers.')
 # encoder layers
-parser.add_argument('--num_layers_encoder', type=int, default=2, help='Num of self-attention encoders.')
+parser.add_argument('--num_layers_encoder', type=int, default=1, help='Num of self-attention encoders.') # 2
 parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn dropout rate.')           # 0.5 original
 parser.add_argument('--scaled_dropout', type=float, default=0.1, help='Input and scaled dropout rate.')  # 0.1 original
 
-parser.add_argument('--word_dropout', type=float, default=0.04,                                      # 0.04
+parser.add_argument('--word_dropout', type=float, default=0.06,                                      # 0.04
                     help='The rate at which randomly set a word to UNK.'
                    )
 
@@ -117,7 +115,7 @@ parser.add_argument('--save_dir', type=str, default='./saved_models', help='Root
 
 parser.add_argument(
     '--id', type=str, 
-    default='57_self_attention_dropout',                                 # change model folder output before running
+    default='61_self_attention_dropout',                                 # change model folder output before running
     help='Model ID under which to save models.'
    )
 
@@ -207,7 +205,7 @@ def main():
         print(
             " use_batch_norm-"+str(opt["use_batch_norm"]) + " relative_positions-"+str(opt["relative_positions"]),
             " decay_epoch-"+str(opt["decay_epoch"]) + " use_lemmas-"+str(opt["use_lemmas"]),
-            " hidden_self_multiplier-"+str(opt["hidden_self_multiplier"])
+            " hidden_self-"+str(opt["hidden_self"])
         )
 
         train_loss = 0
