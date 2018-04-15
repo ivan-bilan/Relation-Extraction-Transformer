@@ -83,12 +83,22 @@ parser.set_defaults(preload_lemmas=False)
 
 parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true', 
     help='In self-attention add obj/subg positional vectors.', default=True)
+
 parser.add_argument('--use_batch_norm', dest='use_batch_norm', action='store_true', 
     help='BatchNorm if true, else LayerNorm in self-attention.', default=True)
+parser.add_argument('--use_layer_norm', dest='use_batch_norm', action='store_true',
+    help='BatchNorm if true, else LayerNorm in self-attention.', default=False)
+parser.set_defaults(use_batch_norm=True)
+
 parser.add_argument('--relative_positions', dest='relative_positions', action='store_true', 
     help='Use relative positions for subj/obj positional vectors.', default=True)
+
 parser.add_argument('--new_residual', dest='new_residual', action='store_true', 
     help='Use a different residual connection than in usual self-attention.', default=True)
+parser.add_argument('--old_residual', dest='new_residual', action='store_true',
+    help='Use a different residual connection than in usual self-attention.', default=False)
+parser.set_defaults(new_residual=True)
+
 
 parser.add_argument('--n_head', type=int, default=3, help='Number of self-attention heads.')
 parser.add_argument('--attn', dest='attn', action='store_true', help='Use attention layer.', default="true")
