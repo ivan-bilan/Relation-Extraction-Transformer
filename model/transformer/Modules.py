@@ -83,9 +83,18 @@ class ScaledDotProductAttention(nn.Module):
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = BottleSoftmax(dim=1)
 
-    def forward(self, q, k, v, attn_mask=None):
+    def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
         attn = torch.bmm(q, k.transpose(1, 2)) / self.temper
+
+        # work with diagonal positional encodings
+        if position_dpa is not None:
+            print("using diagonal positional encodings 2")
+            print(attn.size())
+            print(position_dpa.size())
+
+            attn = torch.bmm(attn, position_dpa.transpose(1, 2))
+            print(attn.size())
 
         # print(attn)
         # print(type(attn), attn.size())
@@ -106,6 +115,7 @@ class ScaledDotProductAttention(nn.Module):
 
         attn = self.softmax(attn)
         attn = self.dropout(attn)
+
         output = torch.bmm(attn, v)
 
         return output, attn

@@ -12,7 +12,7 @@ from .Modules import LayerNormalization
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
-    def __init__(self, n_head, d_model, d_k, d_v, dropout=0.1, scaled_dropout=0.1,
+    def __init__(self, n_head, d_model, d_k, d_v, position_dpa=None, dropout=0.1, scaled_dropout=0.1,
                  use_batch_norm=True, residual_bool=False
                  ):
 
@@ -48,7 +48,7 @@ class MultiHeadAttention(nn.Module):
         init.kaiming_normal(self.w_ks)  # xavier_normal
         init.kaiming_normal(self.w_vs)  # xavier_normal
 
-    def forward(self, q, k, v, attn_mask=None):
+    def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
@@ -69,9 +69,28 @@ class MultiHeadAttention(nn.Module):
         k_s = torch.bmm(k_s, self.w_ks).view(-1, len_k, d_k)    # (n_head*mb_size) x len_k x d_k
         v_s = torch.bmm(v_s, self.w_vs).view(-1, len_v, d_v)    # (n_head*mb_size) x len_v x d_v
 
+        # TODO: set same size to dpa as to the seq_input size
+        if position_dpa is not None:
+            # TODO this is failing!
+            position_dpa_tmp = position_dpa.repeat(n_head, 1, 1).view(n_head, -1, d_model)
+            position_dpa = position_dpa_tmp.view(-1, len_v, d_v)
+
         # perform attention, result size = (n_head * mb_size) x len_q x d_v
         if attn_mask is not None:
-            outputs, attns = self.attention(q_s, k_s, v_s, attn_mask=attn_mask.repeat(n_head, 1, 1))
+
+            if position_dpa is not None:
+
+                print("using diagonal positional encodings 1")
+                outputs, attns = self.attention(
+                    q_s, k_s, v_s,
+                    attn_mask=attn_mask.repeat(n_head, 1, 1),
+                    position_dpa=position_dpa
+                )
+
+            else:
+                outputs, attns = self.attention(q_s, k_s, v_s, attn_mask=attn_mask.repeat(n_head, 1, 1))
+
+        # don't use masking if none given
         else:
             outputs, attns = self.attention(q_s, k_s, v_s)
 

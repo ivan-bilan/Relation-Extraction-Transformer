@@ -67,40 +67,52 @@ parser.add_argument(
     help='Use self-attention layer instead of LSTM.', default=True
 )
 
+# use lemmas instead of raw text
 parser.add_argument('--use_lemmas', dest='use_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
 parser.add_argument('--no_lemmas', dest='use_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
 parser.set_defaults(use_lemmas=False)
 
-
+# preload lemmatized text pickles
 parser.add_argument('--preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
 parser.add_argument('--no_preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
 parser.set_defaults(preload_lemmas=False)
 
-
-parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true', 
+# use object and subject positional encodings
+parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true',
     help='In self-attention add obj/subg positional vectors.', default=True)
 
+# batch norm
 parser.add_argument('--use_batch_norm', dest='use_batch_norm', action='store_true', 
     help='BatchNorm if true, else LayerNorm in self-attention.', default=True)
 parser.add_argument('--use_layer_norm', dest='use_batch_norm', action='store_true',
     help='BatchNorm if true, else LayerNorm in self-attention.', default=False)
 parser.set_defaults(use_batch_norm=True)
 
+# dpa
+parser.add_argument('--diagonal_positional_attention', dest='diagonal_positional_attention', action='store_true',
+    help='Use diagonal attention.', default=True)
+parser.add_argument('--no_diagonal_positional_attention', dest='diagonal_positional_attention', action='store_false')
+parser.set_defaults(diagonal_positional_attention=False)
+
+# relative positional vectors
 parser.add_argument('--relative_positions', dest='relative_positions', action='store_true', 
     help='Use relative positions for subj/obj positional vectors.', default=True)
+parser.add_argument('--no_relative_positions', dest='relative_positions', action='store_false')
+parser.set_defaults(relative_positions=True)
 
+# how to use residual connections
 parser.add_argument('--new_residual', dest='new_residual', action='store_true', 
     help='Use a different residual connection than in usual self-attention.', default=True)
-parser.add_argument('--old_residual', dest='new_residual', action='store_true',
-    help='Use a different residual connection than in usual self-attention.', default=False)
+parser.add_argument('--old_residual', dest='new_residual', action='store_false')
 parser.set_defaults(new_residual=True)
 
-
 parser.add_argument('--n_head', type=int, default=3, help='Number of self-attention heads.')
+
+# use positional attention from stanford paper
 parser.add_argument('--attn', dest='attn', action='store_true', help='Use attention layer.', default="true")
 parser.add_argument('--no-attn', dest='attn', action='store_false')
 parser.set_defaults(attn=True)

@@ -8,7 +8,7 @@ import numpy as np
 from .Constants import *
 from torch.autograd import Variable
 from .Modules import BottleLinear as Linear
-from .Layers import EncoderLayer, DecoderLayer
+from .Layers import EncoderLayer
 
 
 class Embeddings(nn.Module):
@@ -23,9 +23,11 @@ class Embeddings(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    "Implement the PE function."
+    """
+    Implement the PE function.
+    """
 
-    def __init__(self, d_model, dropout, max_len=5000):
+    def __init__(self, d_model, dropout, max_len=96):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -40,14 +42,19 @@ class PositionalEncoding(nn.Module):
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + Variable(self.pe[:, :x.size(1)],
-                         requires_grad=False)
+        x = x + Variable(self.pe[:, :x.size(1)], requires_grad=False)
         return self.dropout(x)
 
 
 def position_encoding_init(n_position, d_pos_vec):
-    ''' Init the sinusoid position encoding table '''
+    """
+    Init the sinusoid position encoding table
 
+    :param n_position:
+    :param d_pos_vec:
+    :return:
+    """
+    
     # keep dim 0 for padding token position encoding zero vector
     position_enc = np.array([
         [pos / np.power(10000, 2 * (j // 2) / d_pos_vec) for j in range(d_pos_vec)]
@@ -97,18 +104,24 @@ def get_attn_subsequent_mask(seq):
 
 
 class Encoder(nn.Module):
-    ''' A encoder model with self attention mechanism. '''
+    """
+    A encoder model with self attention mechanism.
+    """
 
     def __init__(
             self, n_src_vocab, n_max_seq, n_layers=3, n_head=1, d_k=360, d_v=360,
             d_word_vec=360, d_model=360, d_inner_hid=720, dropout=0.1, scaled_dropout=0.1, obj_sub_pos=False,
-            use_batch_norm=True, residual_bool=False):
+            use_batch_norm=True, residual_bool=False, diagonal_positional_attention=False, relative_positions=False):
 
         super(Encoder, self).__init__()
 
         n_position = n_max_seq + 1
         self.n_max_seq = n_max_seq
         self.d_model = d_model
+
+        # new diagonal positional encodings
+        self.diagonal_positional_attention = diagonal_positional_attention
+        self.relative_positions = relative_positions
 
         # decide whether to add subject and object positional vectors to the normal positional vectors
         self.obj_sub_pos = obj_sub_pos
@@ -119,7 +132,7 @@ class Encoder(nn.Module):
         self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
         self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
-        if obj_sub_pos:
+        if obj_sub_pos and not self.diagonal_positional_attention:
             # TODO: do we need to learn separate encodings here???
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
@@ -129,6 +142,11 @@ class Encoder(nn.Module):
 
             self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
 
+        elif self.diagonal_positional_attention:
+            # needs a positional matrix double the size of embeddings
+            self.position_dpa = nn.Embedding(n_position, d_word_vec*2, padding_idx=PAD)
+            self.position_dpa.weight.data = position_encoding_init(n_position, d_word_vec*2)
+
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
@@ -136,11 +154,11 @@ class Encoder(nn.Module):
         # http://nlp.seas.harvard.edu/2018/04/03/attention.html
         self.layer_stack = nn.ModuleList([
             copy.deepcopy(EncoderLayer(
-                d_model,
-                d_inner_hid,
-                n_head,
-                d_k,
-                d_v,
+                d_model=d_model,
+                d_inner_hid=d_inner_hid,
+                n_head=n_head,
+                d_k=d_k,
+                d_v=d_v,
                 dropout=dropout,
                 scaled_dropout=scaled_dropout,
                 use_batch_norm=use_batch_norm,
@@ -161,23 +179,38 @@ class Encoder(nn.Module):
         # originally we used the positional vector of the sentence from 0 to n+1
         # src_seq += self.position_enc(src_pos)
 
+        position_dpa = None
+
         # decide whether to add subject and object positional vectors to the normal positional vectors
-        if self.obj_sub_pos:
+        if self.obj_sub_pos and not self.diagonal_positional_attention:  # this is missing!!!
+
             # original 64f score
             # src_seq = src_seq + self.position_enc(src_pos)
             # + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
 
-            # add object positions only
-            src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+            if self.relative_positions:
+                # add object positions only
+                src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+            else:
+                # TODO
+                # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
+                src_seq += self.position_enc(src_pos)
 
             # new
             # print(pe_features[1])
             # src_seq = self.positions_enc4.forward(src_seq) # self.position_enc2(pe_features[1])  # src_seq +
+        elif self.diagonal_positional_attention:
+            print("src_seq.size():", src_seq.size())
 
+            # TODO: try obj/subj positions
+            print("using diagonal positional encodings 0")
+            position_dpa = self.position_dpa(src_pos)
+
+            print("position_dpa.size():", position_dpa.size())
         else:
             src_seq += self.position_enc(src_pos)
 
-        enc_slf_attns = []
+        enc_slf_attns = list()
         enc_output = src_seq
 
         # add masking for attention
@@ -188,127 +221,9 @@ class Encoder(nn.Module):
 
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
-                slf_attn_mask=enc_slf_attn_mask
+                slf_attn_mask=enc_slf_attn_mask,
+                position_dpa=position_dpa
             )
 
         enc_slf_attns += [enc_slf_attn]
         return enc_output, enc_slf_attns
-
-
-class Decoder(nn.Module):
-    ''' A decoder model with self attention mechanism. '''
-    def __init__(
-            self, n_tgt_vocab, n_max_seq, n_layers=6, n_head=8, d_k=64, d_v=64,
-            d_word_vec=512, d_model=512, d_inner_hid=1024, dropout=0.1):
-
-        super(Decoder, self).__init__()
-
-        n_position = n_max_seq + 1
-        self.n_max_seq = n_max_seq
-        self.d_model = d_model
-
-        self.position_enc = nn.Embedding(
-            n_position, d_word_vec, padding_idx=PAD)
-        self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
-
-        self.tgt_word_emb = nn.Embedding(
-            n_tgt_vocab, d_word_vec, padding_idx=PAD)
-        self.dropout = nn.Dropout(dropout)
-
-        self.layer_stack = nn.ModuleList([
-            DecoderLayer(d_model, d_inner_hid, n_head, d_k, d_v, dropout=dropout)
-            for _ in range(n_layers)])
-
-    def forward(self, tgt_seq, tgt_pos, src_seq, enc_output, return_attns=False):
-        # Word embedding look up
-        dec_input = self.tgt_word_emb(tgt_seq)
-
-        # Position Encoding addition
-        dec_input += self.position_enc(tgt_pos)
-
-        # Decode
-        dec_slf_attn_pad_mask = get_attn_padding_mask(tgt_seq, tgt_seq)
-        dec_slf_attn_sub_mask = get_attn_subsequent_mask(tgt_seq)
-        dec_slf_attn_mask = torch.gt(dec_slf_attn_pad_mask + dec_slf_attn_sub_mask, 0)
-
-        dec_enc_attn_pad_mask = get_attn_padding_mask(tgt_seq, src_seq)
-
-        if return_attns:
-            dec_slf_attns, dec_enc_attns = [], []
-
-        dec_output = dec_input
-
-        for dec_layer in self.layer_stack:
-            dec_output, dec_slf_attn, dec_enc_attn = dec_layer(
-                dec_output, enc_output,
-                slf_attn_mask=dec_slf_attn_mask,
-                dec_enc_attn_mask=dec_enc_attn_pad_mask)
-
-            if return_attns:
-                dec_slf_attns += [dec_slf_attn]
-                dec_enc_attns += [dec_enc_attn]
-
-        if return_attns:
-            return dec_output, dec_slf_attns, dec_enc_attns
-        else:
-            return dec_output,
-
-
-class Transformer(nn.Module):
-    ''' A sequence to sequence model with attention mechanism. '''
-
-    def __init__(
-            self, n_src_vocab, n_tgt_vocab, n_max_seq, n_layers=6, n_head=8,
-            d_word_vec=512, d_model=512, d_inner_hid=1024, d_k=64, d_v=64,
-            dropout=0.1, proj_share_weight=True, embs_share_weight=True):
-
-        super(Transformer, self).__init__()
-
-        self.encoder = Encoder(
-            n_src_vocab, n_max_seq, n_layers=n_layers, n_head=n_head,
-            d_word_vec=d_word_vec, d_model=d_model,
-            d_inner_hid=d_inner_hid, dropout=dropout)
-
-        self.decoder = Decoder(
-            n_tgt_vocab, n_max_seq, n_layers=n_layers, n_head=n_head,
-            d_word_vec=d_word_vec, d_model=d_model,
-            d_inner_hid=d_inner_hid, dropout=dropout)
-
-        self.tgt_word_proj = Linear(d_model, n_tgt_vocab, bias=False)
-        self.dropout = nn.Dropout(dropout)
-
-        assert d_model == d_word_vec, \
-        'To facilitate the residual connections, \
-         the dimensions of all module output shall be the same.'
-
-        if proj_share_weight:
-            # Share the weight matrix between tgt word embedding/projection
-            assert d_model == d_word_vec
-            self.tgt_word_proj.weight = self.decoder.tgt_word_emb.weight
-
-        if embs_share_weight:
-            # Share the weight matrix between src/tgt word embeddings
-            # assume the src/tgt word vec size are the same
-            assert n_src_vocab == n_tgt_vocab, \
-            "To share word embedding table, the vocabulary size of src/tgt shall be the same."
-            self.encoder.src_word_emb.weight = self.decoder.tgt_word_emb.weight
-
-    def get_trainable_parameters(self):
-        ''' Avoid updating the position encoding '''
-        enc_freezed_param_ids = set(map(id, self.encoder.position_enc.parameters()))
-        dec_freezed_param_ids = set(map(id, self.decoder.position_enc.parameters()))
-        freezed_param_ids = enc_freezed_param_ids | dec_freezed_param_ids
-        return (p for p in self.parameters() if id(p) not in freezed_param_ids)
-
-    def forward(self, src, tgt):
-        src_seq, src_pos = src
-        tgt_seq, tgt_pos = tgt
-
-        tgt_seq = tgt_seq[:, :-1]
-        tgt_pos = tgt_pos[:, :-1]
-
-        enc_output, *_ = self.encoder(src_seq, src_pos)
-        dec_output, *_ = self.decoder(tgt_seq, tgt_pos, src_seq, enc_output)
-        seq_logit = self.tgt_word_proj(dec_output)
-
-        return seq_logit.view(-1, seq_logit.size(2))

@@ -118,18 +118,21 @@ class DataLoader(object):
 
             # pass relative positional vectors
             if opt["relative_positions"]:
+
                 # print(subj_positions)
                 # do binning for subject positions
                 # subj_positions_orig = subj_positions
 
                 # TODO: fix arguments for this
                 subj_positions = self.relativate_word_positions(subj_positions)
+
                 # subj_positions = self.bin_positions(subj_positions, 2)
                 # do binning for object positions
                 # print(obj_positions)
 
                 # obj_positions_orig = obj_positions
                 obj_positions = self.relativate_word_positions(obj_positions)
+
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)
 
