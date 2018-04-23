@@ -79,22 +79,44 @@ class ScaledDotProductAttention(nn.Module):
 
     def __init__(self, d_model, attn_dropout=0.1):
         super(ScaledDotProductAttention, self).__init__()
-        self.temper = np.power(d_model, 0.5)
+        self.temper = np.power(d_model, 0.1)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
-        self.softmax = BottleSoftmax(dim=1)
+        self.softmax = BottleSoftmax(dim=-1)
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
+        # initial attention
         attn = torch.bmm(q, k.transpose(1, 2)) / self.temper
+
+        verbose_sizes = False
 
         # work with diagonal positional encodings
         if position_dpa is not None:
-            print("using diagonal positional encodings 2")
-            print(attn.size())
-            print(position_dpa.size())
+            if verbose_sizes:
+                print("using diagonal positional encodings 2")
+                print()
+                print("q.size()                    ", q.size())
+                print("k.transpose(1, 2).size()    ", k.transpose(1, 2).size())
+                print("attn.size()                 ", attn.size())
+                print("position_dpa.size()         ", position_dpa.size())
+                print("position_dpa.transpose(1, 2)", position_dpa.transpose(1, 2).size())
+                print()
 
-            attn = torch.bmm(attn, position_dpa.transpose(1, 2))
-            print(attn.size())
+            # TODO: do we include temper?
+            attn_pos = torch.bmm(q, position_dpa.transpose(1, 2))
+
+            # apply mask to the diagonal positional attention as well
+            if attn_mask is not None:
+
+                assert attn_mask.size() == attn.size(), \
+                    'Attention mask shape {} mismatch ' \
+                    'with Attention logit tensor shape ' \
+                    '{}.'.format(attn_mask.size(), attn.size())
+
+                attn_pos.data.masked_fill_(attn_mask, -float('inf'))
+
+            if verbose_sizes:
+                print(attn_pos.size())
 
         # print(attn)
         # print(type(attn), attn.size())
@@ -112,6 +134,10 @@ class ScaledDotProductAttention(nn.Module):
                     '{}.'.format(attn_mask.size(), attn.size())
 
             attn.data.masked_fill_(attn_mask, -float('inf'))
+
+        # position attention shifted truncated
+        if position_dpa is not None:
+            attn = torch.bmm(attn, attn_pos)
 
         attn = self.softmax(attn)
         attn = self.dropout(attn)

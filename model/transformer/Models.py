@@ -129,8 +129,13 @@ class Encoder(nn.Module):
         # make sure all dimensions are correct, based on the paper
         assert d_word_vec == d_model
 
-        self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-        self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
+        if self.diagonal_positional_attention:
+            # if dpa, double the embedding size
+            self.position_enc = nn.Embedding(n_position, d_word_vec*2, padding_idx=PAD)
+            self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec*2)
+        else:
+            self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+            self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
         if obj_sub_pos and not self.diagonal_positional_attention:
             # TODO: do we need to learn separate encodings here???
@@ -145,7 +150,7 @@ class Encoder(nn.Module):
         elif self.diagonal_positional_attention:
             # needs a positional matrix double the size of embeddings
             self.position_dpa = nn.Embedding(n_position, d_word_vec*2, padding_idx=PAD)
-            self.position_dpa.weight.data = position_encoding_init(n_position, d_word_vec*2)
+            self.position_dpa.weight.data = position_encoding_init(n_position, d_word_vec)
 
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
@@ -199,14 +204,21 @@ class Encoder(nn.Module):
             # new
             # print(pe_features[1])
             # src_seq = self.positions_enc4.forward(src_seq) # self.position_enc2(pe_features[1])  # src_seq +
-        elif self.diagonal_positional_attention:
-            print("src_seq.size():", src_seq.size())
 
-            # TODO: try obj/subj positions
-            print("using diagonal positional encodings 0")
+        elif self.diagonal_positional_attention:
+
+            verbose_sizes = False
+
+            if verbose_sizes:
+                print("src_seq.size():", src_seq.size())
+                # TODO: try obj/subj positions
+                print("using diagonal positional encodings 0")
+
             position_dpa = self.position_dpa(src_pos)
 
-            print("position_dpa.size():", position_dpa.size())
+            if verbose_sizes:
+                print("position_dpa.size():", position_dpa.size())
+
         else:
             src_seq += self.position_enc(src_pos)
 

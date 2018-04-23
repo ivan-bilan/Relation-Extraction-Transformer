@@ -42,6 +42,7 @@ parser.add_argument('--hidden_self', type=int, default=150,
 parser.add_argument('--query_size_attn', type=int, default=360,
                     help='Embedding for query size in the positional attention.')  # n_model*2 in the paper
 parser.add_argument('--num_layers', type=int, default=2, help='Num of lstm layers.')
+
 # encoder layers
 parser.add_argument('--num_layers_encoder', type=int, default=1, help='Num of self-attention encoders.') # 2
 parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn dropout rate.')           # 0.5 original
@@ -67,17 +68,25 @@ parser.add_argument(
     help='Use self-attention layer instead of LSTM.', default=True
 )
 
+# use self-attention + hidden LSTM layer
+parser.add_argument('--self_att_and_rnn', dest='self_att_and_rnn', action='store_true', default="true",
+    help='Use self-attention for outputs and LSTM for the last hidden layer.')
+parser.add_argument('--no_self_att_and_rnn', dest='self_att_and_rnn', action='store_false',
+    help='Use self-attention for outputs and LSTM for the last hidden layer.')
+parser.set_defaults(self_att_and_rnn=False)
+
+
 # use lemmas instead of raw text
 parser.add_argument('--use_lemmas', dest='use_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
-parser.add_argument('--no_lemmas', dest='use_lemmas', action='store_true', default="true",
+parser.add_argument('--no_lemmas', dest='use_lemmas', action='store_false',
     help='Instead of raw text, use spacy lemmas.')
 parser.set_defaults(use_lemmas=False)
 
 # preload lemmatized text pickles
 parser.add_argument('--preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
     help='Instead of raw text, use spacy lemmas.')
-parser.add_argument('--no_preload_lemmas', dest='preload_lemmas', action='store_true', default="true",
+parser.add_argument('--no_preload_lemmas', dest='preload_lemmas', action='store_false', default="true",
     help='Instead of raw text, use spacy lemmas.')
 parser.set_defaults(preload_lemmas=False)
 
@@ -137,7 +146,7 @@ parser.add_argument('--save_dir', type=str, default='./saved_models', help='Root
 
 parser.add_argument(
     '--id', type=str, 
-    default='61_self_attention_dropout',                                 # change model folder output before running
+    default='65_self_attention_dropout',                                 # change model folder output before running
     help='Model ID under which to save models.'
    )
 

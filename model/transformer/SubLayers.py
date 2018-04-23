@@ -30,6 +30,10 @@ class MultiHeadAttention(nn.Module):
         self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
 
+        # for dpa, fill with ones
+        self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
+        init.constant(self.dpa_qs, 1)
+
         # TODO: test this, initially dropout was always set to 0.1!
         # TODO: higher makes the model stable, but Recall is now much lower!
         self.attention = ScaledDotProductAttention(d_model, scaled_dropout)
@@ -55,32 +59,75 @@ class MultiHeadAttention(nn.Module):
 
         residual = q
 
+        verbose_sizes = False
+
         mb_size, len_q, d_model = q.size()
         mb_size, len_k, d_model = k.size()
         mb_size, len_v, d_model = v.size()
+
+        if position_dpa is not None and verbose_sizes:
+            print()
+            print("q before repeat:", q.size())
 
         # treat as a (n_head) size batch
         q_s = q.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_q) x d_model
         k_s = k.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_k) x d_model
         v_s = v.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_v) x d_model
 
+        if position_dpa is not None and verbose_sizes:
+            print("q_s after repeat:", q_s.size())
+
         # treat the result as a (n_head * mb_size) size batch
         q_s = torch.bmm(q_s, self.w_qs).view(-1, len_q, d_k)    # (n_head*mb_size) x len_q x d_k
         k_s = torch.bmm(k_s, self.w_ks).view(-1, len_k, d_k)    # (n_head*mb_size) x len_k x d_k
         v_s = torch.bmm(v_s, self.w_vs).view(-1, len_v, d_v)    # (n_head*mb_size) x len_v x d_v
 
-        # TODO: set same size to dpa as to the seq_input size
+        if position_dpa is not None and verbose_sizes:
+            print("q_s after bmm:", q_s.size())
+            print()
+
+        # TODO: set the same size to dpa as to the seq_input size
         if position_dpa is not None:
-            # TODO this is failing!
-            position_dpa_tmp = position_dpa.repeat(n_head, 1, 1).view(n_head, -1, d_model)
-            position_dpa = position_dpa_tmp.view(-1, len_v, d_v)
+
+            verbose_sizes = True
+
+            if verbose_sizes:
+                print("dpa before repeat:", position_dpa.size())
+
+            # size before this: [50, 91, 360]
+            # size after: [3, 4550, 360]
+            position_dpa = position_dpa.repeat(n_head, 1, 1).view(n_head, -1, d_model)
+
+            if verbose_sizes:
+                print("dpa after repeat:", position_dpa.size())
+
+            # ????
+            # TODO: this fails if we don't resize by multiplying, first column is tripled for some reason
+            # self.dpa_qs is a matrix of ones filled out in init
+
+            # size after multiplying: [3, 4550, 120]             # n_head x (batch_size*len_q) x d_model
+            # size after view: [150, 91, 120]                    # (n_head*batch_size) x len_q x d_k
+            position_dpa = torch.bmm(position_dpa, self.dpa_qs)  # n_head x (batch_size*len_q) x d_model
+            position_dpa = position_dpa.view(-1, len_q, d_k)     # (n_head*batch_size) x len_q x d_k
+
+            # this view doesn't work
+            # position_dpa = position_dpa.view(n_head, d_model, d_k).view(-1, len_q, d_k)
+
+            if verbose_sizes:
+                print("dpa after bmm:", position_dpa.size())
+                print()
 
         # perform attention, result size = (n_head * mb_size) x len_q x d_v
         if attn_mask is not None:
 
             if position_dpa is not None:
 
-                print("using diagonal positional encodings 1")
+                # print("using diagonal positional encodings 1")
+
+                # TODO: the size of dpa changes before this! investigate!
+                # print("q_s before scaled_attn:", q_s.size())
+                # print("dpa before scaled_attn:", position_dpa.size())
+
                 outputs, attns = self.attention(
                     q_s, k_s, v_s,
                     attn_mask=attn_mask.repeat(n_head, 1, 1),

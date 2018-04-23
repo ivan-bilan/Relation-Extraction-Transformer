@@ -19,7 +19,7 @@ from utils.vocab import Vocab
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--model_dir', type=str, help='Directory of the model.',
-    default="saved_models/61_self_attention_dropout/"
+    default="saved_models/66_self_attention_dropout/"
 )
 parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')

@@ -34,6 +34,10 @@ class EncoderLayer(nn.Module):
 
     def forward(self, enc_input, slf_attn_mask=None, position_dpa=None):  # enc_non_embedded, enc_input, enc_pos,
 
+        verbose_sizes = False
+        if position_dpa is not None and verbose_sizes:
+            print("dpa in self_attn:", position_dpa.size())
+
         # here q, k, w are all the same at input
         enc_output, enc_slf_attn = self.slf_attn(
             enc_input, enc_input, enc_input, attn_mask=slf_attn_mask, position_dpa=position_dpa
