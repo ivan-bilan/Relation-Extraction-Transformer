@@ -44,9 +44,10 @@ parser.add_argument('--query_size_attn', type=int, default=360,
 parser.add_argument('--num_layers', type=int, default=2, help='Num of lstm layers.')
 
 # encoder layers
-parser.add_argument('--num_layers_encoder', type=int, default=1, help='Num of self-attention encoders.') # 2
-parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn dropout rate.')           # 0.5 original
-parser.add_argument('--scaled_dropout', type=float, default=0.1, help='Input and scaled dropout rate.')  # 0.1 original
+parser.add_argument('--num_layers_encoder', type=int, default=1, help='Num of self-attention encoders.')  # 2
+parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn dropout rate.')            # 0.5 original
+parser.add_argument('--scaled_dropout', type=float, default=0.1, help='Input and scaled dropout rate.')   # 0.1 original
+parser.add_argument('--temper_value', type=float, default=0.5, help='Temper value for Scaled Attention.') # 0.5 original
 
 parser.add_argument('--word_dropout', type=float, default=0.06,                                      # 0.04
                     help='The rate at which randomly set a word to UNK.'

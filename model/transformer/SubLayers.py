@@ -13,7 +13,7 @@ class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''
 
     def __init__(self, n_head, d_model, d_k, d_v, position_dpa=None, dropout=0.1, scaled_dropout=0.1,
-                 use_batch_norm=True, residual_bool=False
+                 use_batch_norm=True, residual_bool=False, temper_value=0.5
                  ):
 
         super(MultiHeadAttention, self).__init__()
@@ -36,7 +36,7 @@ class MultiHeadAttention(nn.Module):
 
         # TODO: test this, initially dropout was always set to 0.1!
         # TODO: higher makes the model stable, but Recall is now much lower!
-        self.attention = ScaledDotProductAttention(d_model, scaled_dropout)
+        self.attention = ScaledDotProductAttention(d_model, scaled_dropout, temper_value)
 
         if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)

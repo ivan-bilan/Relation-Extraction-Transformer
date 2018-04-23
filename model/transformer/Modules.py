@@ -77,9 +77,11 @@ class BottleLayerNormalization(BatchBottle, LayerNormalization):
 class ScaledDotProductAttention(nn.Module):
     ''' Scaled Dot-Product Attention '''
 
-    def __init__(self, d_model, attn_dropout=0.1):
+    def __init__(self, d_model, attn_dropout=0.1, temper_value=0.5):
         super(ScaledDotProductAttention, self).__init__()
-        self.temper = np.power(d_model, 0.1)    # 0.5 originally
+
+        # add temper as hyperparameter
+        self.temper = np.power(d_model, temper_value)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = BottleSoftmax(dim=-1)
 
