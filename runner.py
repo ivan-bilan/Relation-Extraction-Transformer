@@ -65,9 +65,11 @@ parser.add_argument('--weight_no_rel', type=float, default=1.0, help='Weight for
 parser.add_argument('--weight_rest', type=float, default=1.0, help='Weight for other classes.')
 
 parser.add_argument(
-    '--self-attn', dest='self_att', action='store_true', 
-    help='Use self-attention layer instead of LSTM.', default=True
-)
+    '--self-attn', dest='self_att', action='store_true', help='Use self-attention layer instead of LSTM.', default=True)
+parser.add_argument('--no_self_att', dest='self_att', action='store_false',
+    help='Use self-attention layer instead of LSTM.')
+parser.set_defaults(self_att=True)
+
 
 # use self-attention + hidden LSTM layer
 parser.add_argument('--self_att_and_rnn', dest='self_att_and_rnn', action='store_true', default="true",

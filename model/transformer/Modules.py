@@ -97,15 +97,15 @@ class ScaledDotProductAttention(nn.Module):
             if verbose_sizes:
                 print("using diagonal positional encodings 2")
                 print()
-                print("q.size()                    ", q.size())
-                print("k.transpose(1, 2).size()    ", k.transpose(1, 2).size())
-                print("attn.size()                 ", attn.size())
-                print("position_dpa.size()         ", position_dpa.size())
-                print("position_dpa.transpose(1, 2)", position_dpa.transpose(1, 2).size())
+                print("q.size()                    ", q.size())                             # [150, 86, 120]
+                print("k.transpose(1, 2).size()    ", k.transpose(1, 2).size())             # [150, 120, 86]
+                print("attn.size()                 ", attn.size())                          # [150, 86, 86]
+                print("position_dpa.size()         ", position_dpa.size())                  # [150, 86, 120]
+                print("position_dpa.transpose(1, 2)", position_dpa.transpose(1, 2).size())  # [150, 120, 86]
                 print()
 
-            # TODO: do we include temper?
-            attn_pos = torch.bmm(q, position_dpa.transpose(1, 2))
+            # TODO: do we include temper here as well?
+            attn_pos = torch.bmm(q, position_dpa.transpose(1, 2)) / self.temper
 
             # apply mask to the diagonal positional attention as well
             if attn_mask is not None:
@@ -118,7 +118,7 @@ class ScaledDotProductAttention(nn.Module):
                 attn_pos.data.masked_fill_(attn_mask, -float('inf'))
 
             if verbose_sizes:
-                print(attn_pos.size())
+                print(attn_pos.size())   # [150, 86, 86]
 
         # print(attn)
         # print(type(attn), attn.size())
@@ -139,6 +139,17 @@ class ScaledDotProductAttention(nn.Module):
 
         # position attention shifted truncated
         if position_dpa is not None:
+
+            def stripe(a):
+                # get the diagonal matrix stripe
+                a = np.ascontiguousarray(a)
+                i, j = a.shape
+                assert i >= j
+                k, l = a.strides
+                return np.lib.stride_tricks.as_strided(a, (i - j + 1, j), (k, k + l))
+
+            # attn_pos = stripe(attn_pos)
+
             attn = torch.bmm(attn, attn_pos)
 
         attn = self.softmax(attn)

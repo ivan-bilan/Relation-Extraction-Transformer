@@ -302,6 +302,7 @@ class DataLoader(object):
         # tokens = re.sub(r'\?{1,}', '?', tokens)
 
         tokens = self.nlp(tokens)
+
         # TODO: leave pronouns back in
         # TODO: make it lower too
         tokens = [tok.lemma_.lower().strip() if tok.lemma_ != "-PRON-" else tok.lower_ for tok in tokens]

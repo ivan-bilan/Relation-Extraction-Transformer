@@ -131,13 +131,8 @@ class Encoder(nn.Module):
         # make sure all dimensions are correct, based on the paper
         assert d_word_vec == d_model
 
-        if self.diagonal_positional_attention:
-            # if dpa, double the embedding size
-            self.position_enc = nn.Embedding(n_position, d_word_vec*2, padding_idx=PAD)
-            self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec*2)
-        else:
-            self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
+        self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+        self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
 
         if obj_sub_pos and not self.diagonal_positional_attention:
             # TODO: do we need to learn separate encodings here???
@@ -152,7 +147,7 @@ class Encoder(nn.Module):
         elif self.diagonal_positional_attention:
             # needs a positional matrix double the size of embeddings
             self.position_dpa = nn.Embedding(n_position, d_word_vec*2, padding_idx=PAD)
-            self.position_dpa.weight.data = position_encoding_init(n_position, d_word_vec)
+            self.position_dpa.weight.data = position_encoding_init(n_position, d_word_vec*2)
 
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)

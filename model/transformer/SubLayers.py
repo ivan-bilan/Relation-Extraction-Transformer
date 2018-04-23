@@ -31,7 +31,7 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
 
         # for dpa, fill with ones
-        self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
+        self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model*2, d_k).cuda())
         init.constant(self.dpa_qs, 1)
 
         # TODO: test this, initially dropout was always set to 0.1!
@@ -89,24 +89,23 @@ class MultiHeadAttention(nn.Module):
         # TODO: set the same size to dpa as to the seq_input size
         if position_dpa is not None:
 
-            verbose_sizes = True
+            verbose_sizes = False
 
             if verbose_sizes:
                 print("dpa before repeat:", position_dpa.size())
 
-            # size before this: [50, 91, 360]
+            # size before this: [50, 86, 360] or 720 if *2
             # size after: [3, 4550, 360]
-            position_dpa = position_dpa.repeat(n_head, 1, 1).view(n_head, -1, d_model)
+            position_dpa = position_dpa.repeat(n_head, 1, 1).view(n_head, -1, d_model*2)
 
             if verbose_sizes:
                 print("dpa after repeat:", position_dpa.size())
 
-            # ????
-            # TODO: this fails if we don't resize by multiplying, first column is tripled for some reason
+            # TODO: this fails if we don't resize by multiplying
             # self.dpa_qs is a matrix of ones filled out in init
 
             # size after multiplying: [3, 4550, 120]             # n_head x (batch_size*len_q) x d_model
-            # size after view: [150, 91, 120]                    # (n_head*batch_size) x len_q x d_k
+            # size after view: [150, 86, 120]                    # (n_head*batch_size) x len_q x d_k
             position_dpa = torch.bmm(position_dpa, self.dpa_qs)  # n_head x (batch_size*len_q) x d_model
             position_dpa = position_dpa.view(-1, len_q, d_k)     # (n_head*batch_size) x len_q x d_k
 
@@ -114,7 +113,7 @@ class MultiHeadAttention(nn.Module):
             # position_dpa = position_dpa.view(n_head, d_model, d_k).view(-1, len_q, d_k)
 
             if verbose_sizes:
-                print("dpa after bmm:", position_dpa.size())
+                print("dpa after bmm:", position_dpa.size())    # [150, 86, 120]
                 print()
 
         # perform attention, result size = (n_head * mb_size) x len_q x d_v
