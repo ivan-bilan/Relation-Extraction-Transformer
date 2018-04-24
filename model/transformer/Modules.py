@@ -141,15 +141,14 @@ class ScaledDotProductAttention(nn.Module):
         if position_dpa is not None:
 
             def stripe(a):
-                # get the diagonal matrix stripe
-                a = np.ascontiguousarray(a)
-                i, j = a.shape
-                assert i >= j
-                k, l = a.strides
-                return np.lib.stride_tricks.as_strided(a, (i - j + 1, j), (k, k + l))
+                i, j = a.size()
+                assert (i >= j)
+                out = torch.zeros((i - j + 1, j))
+                for diag in range(0, i - j + 1):
+                    out[diag] = torch.diag(a, -diag)
+                return out
 
-            # attn_pos = stripe(attn_pos)
-
+            attn_pos = stripe(attn_pos)
             attn = torch.bmm(attn, attn_pos)
 
         attn = self.softmax(attn)
