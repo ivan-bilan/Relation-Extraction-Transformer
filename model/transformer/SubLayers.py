@@ -30,9 +30,11 @@ class MultiHeadAttention(nn.Module):
         self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
 
+        # self.position_dpa2 = nn.Parameter(torch.FloatTensor(n_head, (96 * 2) - 1, d_k).cuda())
+
         # for dpa, fill with ones
-        self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model*2, d_k).cuda())
-        init.constant(self.dpa_qs, 1)
+        # self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model*2, d_k).cuda())
+        # init.constant(self.dpa_qs, 1)
 
         # TODO: test this, initially dropout was always set to 0.1!
         # TODO: higher makes the model stable, but Recall is now much lower!
@@ -51,6 +53,9 @@ class MultiHeadAttention(nn.Module):
         init.kaiming_normal(self.w_qs)  # xavier_normal used originally
         init.kaiming_normal(self.w_ks)  # xavier_normal
         init.kaiming_normal(self.w_vs)  # xavier_normal
+
+        # dpa???
+        # init.kaiming_normal(self.position_dpa2)  # xavier_normal
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
@@ -95,19 +100,33 @@ class MultiHeadAttention(nn.Module):
                 print("dpa before repeat:", position_dpa.size())
 
             # size before this: [50, 86, 360] or 720 if *2
-            # size after: [3, 4550, 360]
-            position_dpa = position_dpa.repeat(n_head, 1, 1).view(n_head, -1, d_model*2)
+            # size after: [3, 4550, 360] or 720 if *2
+
+            position_dpa = position_dpa.repeat(n_head, 1, 1)
 
             if verbose_sizes:
                 print("dpa after repeat:", position_dpa.size())
+
+            position_dpa = position_dpa.view(n_head, -1, d_model//n_head)
+
+            if verbose_sizes:
+                print("dpa after repeat 2 view:", position_dpa.size())
 
             # TODO: this fails if we don't resize by multiplying
             # self.dpa_qs is a matrix of ones filled out in init
 
             # size after multiplying: [3, 4550, 120]             # n_head x (batch_size*len_q) x d_model
             # size after view: [150, 86, 120]                    # (n_head*batch_size) x len_q x d_k
-            position_dpa = torch.bmm(position_dpa, self.dpa_qs)  # n_head x (batch_size*len_q) x d_model
-            position_dpa = position_dpa.view(-1, len_q, d_k)     # (n_head*batch_size) x len_q x d_k
+
+            # position_dpa = torch.bmm(position_dpa, self.position_dpa2)  # n_head x (batch_size*len_q) x d_model
+            # if verbose_sizes:
+            #    print(position_dpa.size())
+
+            # do the last view
+            position_dpa = position_dpa.view(-1, len_q*2, d_k)     # (n_head*batch_size) x len_q x d_k
+
+            if verbose_sizes:
+                print("dpa after last view:", position_dpa.size())
 
             # this view doesn't work
             # position_dpa = position_dpa.view(n_head, d_model, d_k).view(-1, len_q, d_k)

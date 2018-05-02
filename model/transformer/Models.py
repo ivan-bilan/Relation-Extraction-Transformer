@@ -46,6 +46,29 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 
+class PositionalEncodingLookup(nn.Module):
+    """
+    Implement the PE function.
+    """
+
+    def __init__(self, d_model, max_len=96):
+        super(PositionalEncoding, self).__init__()
+
+        # Compute the positional encodings once in log space.
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) *
+                             -(math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = Variable(self.pe[:, :x.size(1)], requires_grad=False)
+        return x
+
+
 def position_encoding_init(n_position, d_pos_vec):
     """
     Init the sinusoid position encoding table
@@ -146,8 +169,16 @@ class Encoder(nn.Module):
 
         elif self.diagonal_positional_attention:
             # needs a positional matrix double the size of embeddings
-            self.position_dpa = nn.Embedding(n_position, d_word_vec*2, padding_idx=PAD)
-            self.position_dpa.weight.data = position_encoding_init(n_position, d_word_vec*2)
+
+            # other
+            # self.position_dpa = nn.Parameter(torch.FloatTensor((n_position*2)-1, d_word_vec//n_head).cuda())
+            # position_encoding_init((n_position*2)-1, d_word_vec//n_head)
+
+            # working
+            self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
+            self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
+
+            # self.position_dpa2 = PositionalEncodingLookup(d_word_vec//n_head, (n_position*2)-1)
 
         # this is for self-learned embeddings?
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
@@ -197,7 +228,7 @@ class Encoder(nn.Module):
             else:
                 # TODO
                 # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
-                src_seq += self.position_enc(src_pos)
+                src_seq += self.position_enc(src_pos)  # src_pos
 
             # new
             # print(pe_features[1])
@@ -212,7 +243,8 @@ class Encoder(nn.Module):
                 # TODO: try obj/subj positions
                 print("using diagonal positional encodings 0")
 
-            position_dpa = self.position_dpa(src_pos)
+            position_dpa = self.position_dpa(pe_features[1])  # src_pos
+            # position_dpa = self.position_dpa2.forward(pe_features[1])  # src_pos
 
             if verbose_sizes:
                 print("position_dpa.size():", position_dpa.size())

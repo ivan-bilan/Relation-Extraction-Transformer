@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.autograd import Variable
 import torch.nn.init as init
 import numpy as np
 
@@ -108,15 +109,6 @@ class ScaledDotProductAttention(nn.Module):
             attn_pos = torch.bmm(q, position_dpa.transpose(1, 2)) / self.temper
 
             # apply mask to the diagonal positional attention as well
-            if attn_mask is not None:
-
-                assert attn_mask.size() == attn.size(), \
-                    'Attention mask shape {} mismatch ' \
-                    'with Attention logit tensor shape ' \
-                    '{}.'.format(attn_mask.size(), attn.size())
-
-                attn_pos.data.masked_fill_(attn_mask, -float('inf'))
-
             if verbose_sizes:
                 print(attn_pos.size())   # [150, 86, 86]
 
@@ -125,6 +117,38 @@ class ScaledDotProductAttention(nn.Module):
 
         # print(attn_mask)
         # attn_mask = None
+
+        # position attention shifted truncated
+        if position_dpa is not None:
+
+            def stripe(a):
+                i, j = a.size()
+                assert (i >= j)
+
+                # pytorch 0.4
+                # out = torch.zeros((i - j + 1, j))
+
+                # pytorch 0.3.1
+                out = Variable(torch.zeros(i - j, j)).cuda()
+
+                for diag in range(0, i - j):
+                    out[diag] = torch.diag(a, -diag)
+
+                return out
+
+            # TODO: how to apply this correctly, what column?
+            # print(type(attn_pos), attn_pos.size())
+
+            # unbind the first batch dimension before extracting the diagonal stripe
+            attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
+            attn_pos = torch.stack(attn_pos, 0)
+
+            if verbose_sizes:
+                print(attn_pos.size())
+                print(attn.size())
+                print(attn_pos.transpose(1, 2).size())
+
+            attn = attn + attn_pos.transpose(1, 2)
 
         if attn_mask is not None:
             # print(attn_mask)
@@ -136,20 +160,6 @@ class ScaledDotProductAttention(nn.Module):
                     '{}.'.format(attn_mask.size(), attn.size())
 
             attn.data.masked_fill_(attn_mask, -float('inf'))
-
-        # position attention shifted truncated
-        if position_dpa is not None:
-
-            def stripe(a):
-                i, j = a.size()
-                assert (i >= j)
-                out = torch.zeros((i - j + 1, j))
-                for diag in range(0, i - j + 1):
-                    out[diag] = torch.diag(a, -diag)
-                return out
-
-            attn_pos = stripe(attn_pos)
-            attn = torch.bmm(attn, attn_pos)
 
         attn = self.softmax(attn)
         attn = self.dropout(attn)

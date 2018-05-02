@@ -131,7 +131,7 @@ class DataLoader(object):
                 # print(obj_positions)
 
                 # obj_positions_orig = obj_positions
-                obj_positions = self.relativate_word_positions(obj_positions)
+                obj_positions = self.relativate_word_positions(obj_positions, opt["diagonal_positional_attention"])  # opt["diagonal_positional_attention"]
 
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)
@@ -162,7 +162,7 @@ class DataLoader(object):
 
         return processed
 
-    def relativate_word_positions(self, positions_list):
+    def relativate_word_positions(self, positions_list, dpa=None):
         """
         Recalculate the word positions by decreasing their relativeness based on the distance to
         query or object:
@@ -188,7 +188,10 @@ class DataLoader(object):
         if len(positions_list) != len(new_list_final):
             print("Error in positional embeddings!")
 
-        return new_list_final
+        if dpa is not None:
+            return new_list_final+new_list_final
+        else:
+            return new_list_final
 
     def bin_positions(self, positions_list, width):
         """
