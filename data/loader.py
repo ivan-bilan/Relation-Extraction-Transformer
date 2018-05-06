@@ -115,6 +115,7 @@ class DataLoader(object):
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
+            obj_positions_single = get_positions(d['obj_start'], d['obj_end'], l)
 
             # pass relative positional vectors
             if opt["relative_positions"]:
@@ -132,6 +133,7 @@ class DataLoader(object):
 
                 # obj_positions_orig = obj_positions
                 obj_positions = self.relativate_word_positions(obj_positions, opt["diagonal_positional_attention"])  # opt["diagonal_positional_attention"]
+                obj_positions_single = self.relativate_word_positions(obj_positions_single)
 
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)
@@ -144,7 +146,7 @@ class DataLoader(object):
 
             # return vector of the whole partitioned data
             processed += [
-                (tokens, pos, ner, deprel, subj_positions, obj_positions,
+                (tokens, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single,
                            inst_position, relation)
                           ]
 
@@ -188,8 +190,10 @@ class DataLoader(object):
         if len(positions_list) != len(new_list_final):
             print("Error in positional embeddings!")
 
-        if dpa is not None:
-            return new_list_final+new_list_final
+        # TODO: how to implement dpa???
+        # try the dpa trick by doubling the position vector
+        if dpa:
+            return new_list_final + new_list_final
         else:
             return new_list_final
 
@@ -346,7 +350,7 @@ class DataLoader(object):
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 8
+        assert len(batch) == 9
 
         # sort all fields by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -365,18 +369,19 @@ class DataLoader(object):
         words = get_long_tensor(words, batch_size)              # matrix of tokens
         pos = get_long_tensor(batch[1], batch_size)             # matrix of part of speech embeddings
         ner = get_long_tensor(batch[2], batch_size)             # matrix for NER embeddings
-        deprel = get_long_tensor(batch[3], batch_size)          # stanford dependancy parser stuff... not sure
+        deprel = get_long_tensor(batch[3], batch_size)          # stanford dependency parser stuff... not sure
 
         subj_positions = get_long_tensor(batch[4], batch_size)  # matrix of positional lists relative to subject
         obj_positions = get_long_tensor(batch[5], batch_size)   # matrix of positional lists relative to object
+        obj_positions_single = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
 
-        src_pos = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
+        src_pos = get_long_tensor(batch[7], batch_size)  # matrix, positional ids for all words in sentence
 
         # new masks with positional padding
         masks = torch.eq(words, 0)  # should we also do +src_pos?
-        rels = torch.LongTensor(batch[7])                       # list of relation labels for this batch
+        rels = torch.LongTensor(batch[8])                       # list of relation labels for this batch
 
-        return (words, masks, pos, ner, deprel, subj_positions, obj_positions, src_pos, rels, orig_idx)
+        return (words, masks, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single, src_pos, rels, orig_idx)
 
     def __iter__(self):
         for i in range(self.__len__()):

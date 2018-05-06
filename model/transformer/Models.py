@@ -175,8 +175,12 @@ class Encoder(nn.Module):
             # position_encoding_init((n_position*2)-1, d_word_vec//n_head)
 
             # working
+
+            # TODO: try n_pos, n_pos*2-1
             self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
             self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
+            # make sure embeddings are trainable
+            self.position_dpa.weight.requires_grad = True
 
             # self.position_dpa2 = PositionalEncodingLookup(d_word_vec//n_head, (n_position*2)-1)
 
@@ -236,7 +240,7 @@ class Encoder(nn.Module):
 
         elif self.diagonal_positional_attention:
 
-            verbose_sizes = False
+            verbose_sizes = True
 
             if verbose_sizes:
                 print("src_seq.size():", src_seq.size())

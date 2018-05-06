@@ -246,7 +246,9 @@ def main():
         for i, batch in enumerate(train_batch):
             start_time = time.time()
             global_step += 1
+
             loss = model.update(batch)
+
             train_loss += loss
             if global_step % opt['log_step'] == 0:
                 duration = time.time() - start_time

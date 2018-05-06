@@ -5,6 +5,23 @@ import torch.nn.init as init
 import numpy as np
 
 
+def stripe(a):
+
+    i, j = a.size()
+    assert (i > j)
+
+    # pytorch 0.4
+    # out = torch.zeros((i - j + 1, j))
+
+    # pytorch 0.3.1
+    out = Variable(torch.zeros(i - j, j)).cuda()
+
+    for diag in range(0, i - j):
+        out[diag] = torch.diag(a, -diag)
+
+    return out
+
+
 class Linear(nn.Module):
     ''' Simple Linear layer with xavier init '''
     def __init__(self, d_in, d_out, bias=True):
@@ -112,43 +129,23 @@ class ScaledDotProductAttention(nn.Module):
             if verbose_sizes:
                 print(attn_pos.size())   # [150, 86, 86]
 
-        # print(attn)
-        # print(type(attn), attn.size())
-
-        # print(attn_mask)
-        # attn_mask = None
-
-        # position attention shifted truncated
-        if position_dpa is not None:
-
-            def stripe(a):
-                i, j = a.size()
-                assert (i >= j)
-
-                # pytorch 0.4
-                # out = torch.zeros((i - j + 1, j))
-
-                # pytorch 0.3.1
-                out = Variable(torch.zeros(i - j, j)).cuda()
-
-                for diag in range(0, i - j):
-                    out[diag] = torch.diag(a, -diag)
-
-                return out
-
             # TODO: how to apply this correctly, what column?
             # print(type(attn_pos), attn_pos.size())
 
             # unbind the first batch dimension before extracting the diagonal stripe
             attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
-            attn_pos = torch.stack(attn_pos, 0)
+
+            attn_pos_new = torch.stack(attn_pos, 0)
+            # print(attn_pos_new)
+            del attn_pos
 
             if verbose_sizes:
-                print(attn_pos.size())
+                print(attn_pos_new.size())
                 print(attn.size())
-                print(attn_pos.transpose(1, 2).size())
+                print(attn_pos_new.transpose(1, 2).size())
 
-            attn = attn + attn_pos.transpose(1, 2)
+            attn = attn + attn_pos_new.transpose(1, 2)
+            del attn_pos_new
 
         if attn_mask is not None:
             # print(attn_mask)
@@ -160,6 +157,8 @@ class ScaledDotProductAttention(nn.Module):
                     '{}.'.format(attn_mask.size(), attn.size())
 
             attn.data.masked_fill_(attn_mask, -float('inf'))
+
+        # print(attn.size())
 
         attn = self.softmax(attn)
         attn = self.dropout(attn)
