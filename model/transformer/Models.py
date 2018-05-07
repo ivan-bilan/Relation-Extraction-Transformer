@@ -240,7 +240,7 @@ class Encoder(nn.Module):
 
         elif self.diagonal_positional_attention:
 
-            verbose_sizes = True
+            verbose_sizes = False
 
             if verbose_sizes:
                 print("src_seq.size():", src_seq.size())

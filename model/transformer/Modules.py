@@ -11,13 +11,19 @@ def stripe(a):
     assert (i > j)
 
     # pytorch 0.4
+    # original
     # out = torch.zeros((i - j + 1, j))
+    #
+    out = torch.zeros((i - j, j))
 
     # pytorch 0.3.1
-    out = Variable(torch.zeros(i - j, j)).cuda()
+    # Variable is not properly tracked in the loss.backward(), causing an error
+    # out = Variable(torch.zeros(i - j, j), requires_grad=False).cuda()
 
     for diag in range(0, i - j):
-        out[diag] = torch.diag(a, -diag)
+        # out[diag] = torch.diag(a, -diag)
+        # if using a.data we don't have to wrap the 'out' into a Variable
+        out[diag] = torch.diag(a.data, -diag)
 
     return out
 
@@ -134,18 +140,14 @@ class ScaledDotProductAttention(nn.Module):
 
             # unbind the first batch dimension before extracting the diagonal stripe
             attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
-
-            attn_pos_new = torch.stack(attn_pos, 0)
-            # print(attn_pos_new)
-            del attn_pos
+            attn_pos = torch.stack(attn_pos, 0)
 
             if verbose_sizes:
-                print(attn_pos_new.size())
+                print(attn_pos.size())
                 print(attn.size())
-                print(attn_pos_new.transpose(1, 2).size())
+                print(attn_pos.transpose(1, 2).size())
 
-            attn = attn + attn_pos_new.transpose(1, 2)
-            del attn_pos_new
+            attn = attn + Variable(attn_pos).transpose(1, 2).cuda()
 
         if attn_mask is not None:
             # print(attn_mask)

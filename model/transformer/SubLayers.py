@@ -94,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         # TODO: set the same size to dpa as to the seq_input size
         if position_dpa is not None:
 
-            verbose_sizes = True
+            verbose_sizes = False
 
             if verbose_sizes:
                 print("dpa before repeat:", position_dpa.size())
