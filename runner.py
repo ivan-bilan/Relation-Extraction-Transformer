@@ -144,7 +144,7 @@ parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient c
 # info for model saving
 parser.add_argument('--log_step', type=int, default=400, help='Print log every k steps.')
 parser.add_argument('--log', type=str, default='logs.txt', help='Write training log to file.')
-parser.add_argument('--save_epoch', type=int, default=2, help='Save model checkpoints every k epochs.')
+parser.add_argument('--save_epoch', type=int, default=1, help='Save model checkpoints every k epochs.')
 parser.add_argument('--save_dir', type=str, default='./saved_models', help='Root dir for saving models.')
 
 parser.add_argument(

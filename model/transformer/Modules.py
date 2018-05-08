@@ -5,29 +5,6 @@ import torch.nn.init as init
 import numpy as np
 
 
-def stripe(a):
-
-    i, j = a.size()
-    assert (i > j)
-
-    # pytorch 0.4
-    # original
-    # out = torch.zeros((i - j + 1, j))
-    #
-    out = torch.zeros((i - j, j))
-
-    # pytorch 0.3.1
-    # Variable is not properly tracked in the loss.backward(), causing an error
-    # out = Variable(torch.zeros(i - j, j), requires_grad=False).cuda()
-
-    for diag in range(0, i - j):
-        # out[diag] = torch.diag(a, -diag)
-        # if using a.data we don't have to wrap the 'out' into a Variable
-        out[diag] = torch.diag(a.data, -diag)
-
-    return out
-
-
 class Linear(nn.Module):
     ''' Simple Linear layer with xavier init '''
     def __init__(self, d_in, d_out, bias=True):
@@ -109,6 +86,28 @@ class ScaledDotProductAttention(nn.Module):
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = BottleSoftmax(dim=-1)
 
+    def stripe(self, a):
+
+        i, j = a.size()
+        assert (i > j)
+
+        # pytorch 0.4
+        # original
+        # out = torch.zeros((i - j + 1, j))
+        #
+        out = torch.zeros((i - j, j))
+
+        # pytorch 0.3.1
+        # Variable is not properly tracked in the loss.backward(), causing an error
+        # out = Variable(torch.zeros(i - j, j), requires_grad=False).cuda()
+
+        for diag in range(0, i - j):
+            # out[diag] = torch.diag(a, -diag)
+            # if using a.data we don't have to wrap the 'out' into a Variable
+            out[diag] = torch.diag(a.data, -diag)
+
+        return out
+
     def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
         # initial attention
@@ -139,15 +138,15 @@ class ScaledDotProductAttention(nn.Module):
             # print(type(attn_pos), attn_pos.size())
 
             # unbind the first batch dimension before extracting the diagonal stripe
-            attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
-            attn_pos = torch.stack(attn_pos, 0)
+            attn_pos = list(map(self.stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
+            attn_pos = Variable(torch.stack(attn_pos), 0).cuda()
 
             if verbose_sizes:
                 print(attn_pos.size())
                 print(attn.size())
                 print(attn_pos.transpose(1, 2).size())
 
-            attn = attn + Variable(attn_pos).transpose(1, 2).cuda()
+            attn = attn + attn_pos.transpose(1, 2)
 
         if attn_mask is not None:
             # print(attn_mask)
