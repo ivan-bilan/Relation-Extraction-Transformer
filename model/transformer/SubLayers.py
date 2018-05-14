@@ -26,9 +26,9 @@ class MultiHeadAttention(nn.Module):
         self.residual_bool = residual_bool
 
         # TODO: default without cuda, do we need cuda call here?
-        self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
-        self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).cuda())
-        self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).cuda())
+        self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).to("cuda"))
+        self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).to("cuda"))
+        self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).to("cuda"))
 
         # self.position_dpa2 = nn.Parameter(torch.FloatTensor(n_head, (96 * 2) - 1, d_k).cuda())
 
@@ -43,16 +43,19 @@ class MultiHeadAttention(nn.Module):
         if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)
         else:  # layer norm
-            self.layer_norm = LayerNormalization(d_model)
+            # pytorch 0.3.1
+            # self.layer_norm = LayerNormalization(d_model)
+            # pytorch 0.4
+            self.layer_norm = nn.LayerNorm(d_model)
 
         self.proj = Linear(n_head*d_v, d_model)
 
         self.dropout = nn.Dropout(dropout)
 
         # TODO: experiment with he and xavier
-        init.kaiming_normal(self.w_qs)  # xavier_normal used originally
-        init.kaiming_normal(self.w_ks)  # xavier_normal
-        init.kaiming_normal(self.w_vs)  # xavier_normal
+        init.kaiming_normal_(self.w_qs)  # xavier_normal used originally
+        init.kaiming_normal_(self.w_ks)  # xavier_normal
+        init.kaiming_normal_(self.w_vs)  # xavier_normal
 
         # dpa???
         # init.kaiming_normal(self.position_dpa2)  # xavier_normal
@@ -195,13 +198,24 @@ class PositionwiseFeedForward(nn.Module):
 
         self.use_batch_norm = True
 
+        # self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1)  # position-wise
+        # self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
+
         self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1)  # position-wise
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
 
         if self.use_batch_norm:
-            self.layer_norm = nn.BatchNorm1d(d_hid)
+            self.layer_norm = nn.BatchNorm1d(d_hid)  # BatchNorm1d(d_hid)
+
+            # other options here
+            # nn.GroupNorm(d_hid, d_hid)
+            # nn.BatchNorm1d(d_hid)
         else:
-            self.layer_norm = LayerNormalization(d_hid)
+            # use the initially provided layer norm
+            # self.layer_norm = LayerNormalization(d_hid)
+
+            # use LayerNorm form PyTorch 0.4
+            self.layer_norm = nn.LayerNorm(d_hid)
 
         self.dropout = nn.Dropout(dropout)
 

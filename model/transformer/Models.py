@@ -121,7 +121,7 @@ def get_attn_subsequent_mask(seq):
     subsequent_mask = torch.from_numpy(subsequent_mask)
 
     if seq.is_cuda:
-        subsequent_mask = subsequent_mask.cuda()
+        subsequent_mask = subsequent_mask.to("cuda")
 
     return subsequent_mask
 

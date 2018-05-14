@@ -19,9 +19,10 @@ from utils.vocab import Vocab
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--model_dir', type=str, help='Directory of the model.',
-    default="saved_models/tmp2/"
+    default="saved_models/tmp5/"
 )
-parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
+# parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
+parser.add_argument('--model', type=str, default='checkpoint_epoch_53.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')
 parser.add_argument('--dataset', type=str, default='test', help="Evaluate on dev or test.")
 parser.add_argument('--out', type=str,
@@ -68,10 +69,12 @@ id2label = dict([(v,k) for k,v in constant.LABEL_TO_ID.items()])
 
 predictions = []
 all_probs = []
-for i, b in enumerate(batch):
-    preds, probs, _ = model.predict(b)
-    predictions += preds
-    all_probs += probs
+
+with torch.no_grad():
+    for i, b in enumerate(batch):
+        preds, probs, _ = model.predict(b)
+        predictions += preds
+        all_probs += probs
 
 predictions = [id2label[p] for p in predictions]
 p, r, f1 = scorer.score(batch.gold(), predictions, verbose=True)

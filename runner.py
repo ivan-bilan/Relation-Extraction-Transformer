@@ -14,15 +14,14 @@ from shutil import copyfile
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.autograd import Variable
-
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from data.loader import DataLoader
 from model.rnn import RelationModel
 from utils import scorer, constant, helper
 from utils.vocab import Vocab
 
 print(torch.__version__)
-torch.backends.cudnn.version()
+print(torch.backends.cudnn.version())
 
 import argparse
 # import sys; sys.argv=['']; del sys  # this has to be done if argparse is used in the notebook
@@ -31,8 +30,8 @@ from datetime import datetime
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--data_dir', type=str, default='dataset/tacred')
-parser.add_argument('--vocab_dir', type=str, default='dataset/vocab')
+parser.add_argument('--data_dir', type=str, default='C:/dataset/tacred')
+parser.add_argument('--vocab_dir', type=str, default='C:/dataset/vocab')
 parser.add_argument('--emb_dim', type=int, default=300, help='Word embedding dimension.')
 parser.add_argument('--ner_dim', type=int, default=30, help='NER embedding dimension.')
 parser.add_argument('--pos_dim', type=int, default=30, help='POS embedding dimension.')
@@ -100,7 +99,7 @@ parser.add_argument('--obj_sub_pos', dest='obj_sub_pos', action='store_true',
 # batch norm
 parser.add_argument('--use_batch_norm', dest='use_batch_norm', action='store_true', 
     help='BatchNorm if true, else LayerNorm in self-attention.', default=True)
-parser.add_argument('--use_layer_norm', dest='use_batch_norm', action='store_true',
+parser.add_argument('--use_layer_norm', dest='use_batch_norm', action='store_false',
     help='BatchNorm if true, else LayerNorm in self-attention.', default=False)
 parser.set_defaults(use_batch_norm=True)
 
@@ -149,7 +148,7 @@ parser.add_argument('--save_dir', type=str, default='./saved_models', help='Root
 
 parser.add_argument(
     '--id', type=str, 
-    default='65_self_attention_dropout',                                 # change model folder output before running
+    default='tmp4',                                 # change model folder output before running
     help='Model ID under which to save models.'
    )
 
@@ -174,7 +173,7 @@ def main():
         args.cuda = False
     elif args.cuda:
         torch.cuda.manual_seed(args.seed)
-
+    print("i am here")
     # make opt
     opt = vars(args)
     opt['num_class'] = len(constant.LABEL_TO_ID)
@@ -222,6 +221,9 @@ def main():
     global_start_time = time.time()
     format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
     max_steps = len(train_batch) * opt['num_epoch']
+
+    # setup the scheduler for lr decay
+    # scheduler = ReduceLROnPlateau(model.optimizer, mode='min', factor=opt['lr_decay'], patience=1)
 
     # start training
     for epoch in range(1, opt['num_epoch']+1):
@@ -291,10 +293,14 @@ def main():
         if epoch % opt['save_epoch'] != 0:
             os.remove(model_file)
 
+        # reduce learning rate if it stagnates by a certain decay rate and within given epoch patience
+        # scheduler.step(dev_loss)
+
         # decay schedule # 15 is best!
-        if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:  # and opt['optim'] in ['sgd', 'asgd', 'adagrad', 'adam', 'nadam']
-            current_lr *= opt['lr_decay']
-            model.update_lr(current_lr)
+        # simulate patience of x epochs
+        if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
+           current_lr *= opt['lr_decay']
+           model.update_lr(current_lr)
 
         dev_f1_history += [dev_f1]
         print("")

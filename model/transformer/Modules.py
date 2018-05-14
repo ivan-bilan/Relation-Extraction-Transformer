@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.nn.init as init
 import numpy as np
 
@@ -10,7 +9,7 @@ class Linear(nn.Module):
     def __init__(self, d_in, d_out, bias=True):
         super(Linear, self).__init__()
         self.linear = nn.Linear(d_in, d_out, bias=bias)
-        init.xavier_normal(self.linear.weight)
+        init.xavier_normal_(self.linear.weight)
 
     def forward(self, x):
         return self.linear(x)
@@ -22,8 +21,11 @@ class Bottle(nn.Module):
     def forward(self, input):
         if len(input.size()) <= 2:
             return super(Bottle, self).forward(input)
+
         size = input.size()[:2]
+
         out = super(Bottle, self).forward(input.view(size[0]*size[1], -1))
+
         return out.view(size[0], size[1], -1)
 
 
@@ -84,29 +86,7 @@ class ScaledDotProductAttention(nn.Module):
         # add temper as hyperparameter
         self.temper = np.power(d_model, temper_value)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
-        self.softmax = BottleSoftmax(dim=-1)
-
-    def stripe(self, a):
-
-        i, j = a.size()
-        assert (i > j)
-
-        # pytorch 0.4
-        # original
-        # out = torch.zeros((i - j + 1, j))
-        #
-        out = torch.zeros((i - j, j))
-
-        # pytorch 0.3.1
-        # Variable is not properly tracked in the loss.backward(), causing an error
-        # out = Variable(torch.zeros(i - j, j), requires_grad=False).cuda()
-
-        for diag in range(0, i - j):
-            # out[diag] = torch.diag(a, -diag)
-            # if using a.data we don't have to wrap the 'out' into a Variable
-            out[diag] = torch.diag(a.data, -diag)
-
-        return out
+        self.softmax = BottleSoftmax(dim=1)  # ? -1
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
@@ -134,12 +114,23 @@ class ScaledDotProductAttention(nn.Module):
             if verbose_sizes:
                 print(attn_pos.size())   # [150, 86, 86]
 
-            # TODO: how to apply this correctly, what column?
-            # print(type(attn_pos), attn_pos.size())
+            def batch_stripe(a):
+                """
+                Get a diagonal stripe of a matrix m x n, where n > m
+                this implementation also takes into account batched matrices,
+                so the stripe is calculated over a batch x for a matrix of size[x, m, n]
+                """
+                b, i, j = a.size()
+                assert i > j
+                b_s, k, l = a.stride()
+                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + 1))
 
+            attn_pos = batch_stripe(attn_pos.transpose(1, 2))
             # unbind the first batch dimension before extracting the diagonal stripe
-            attn_pos = list(map(self.stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
-            attn_pos = Variable(torch.stack(attn_pos), 0).cuda()
+            # attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
+            # attn_pos = torch.stack(attn_pos, 0)
+
+            # print(attn_pos.size())
 
             if verbose_sizes:
                 print(attn_pos.size())
