@@ -218,7 +218,7 @@ def get_optimizer(name, parameters, lr):
         # use new adagrad to allow for init accumulator value
         return MyAdagrad(parameters, lr=lr, init_accu_value=0.1)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, betas=(0.9, 0.99), lr=lr)
+        return torch.optim.Adam(parameters, betas=(0.9, 0.999), lr=lr, amsgrad=True)
     elif name == 'adamax':
         return torch.optim.Adamax(parameters, lr=lr)
     else:

@@ -22,7 +22,7 @@ parser.add_argument(
     default="saved_models/tmp5/"
 )
 # parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
-parser.add_argument('--model', type=str, default='checkpoint_epoch_53.pt', help='Name of the model file.')
+parser.add_argument('--model', type=str, default='best_model.pt', help='Name of the model file.')
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')
 parser.add_argument('--dataset', type=str, default='test', help="Evaluate on dev or test.")
 parser.add_argument('--out', type=str,

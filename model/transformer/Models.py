@@ -181,7 +181,7 @@ class Encoder(nn.Module):
             self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
             # make sure embeddings are trainable
             self.position_dpa.weight.requires_grad = True
-
+            # print(self.position_dpa)
             # self.position_dpa2 = PositionalEncodingLookup(d_word_vec//n_head, (n_position*2)-1)
 
         # this is for self-learned embeddings?

@@ -49,10 +49,9 @@ class MultiHeadAttention(nn.Module):
             self.layer_norm = nn.LayerNorm(d_model)
 
         self.proj = Linear(n_head*d_v, d_model)
-
         self.dropout = nn.Dropout(dropout)
 
-        # TODO: experiment with he and xavier
+        # TODO: try # , nonlinearity='relu'
         init.kaiming_normal_(self.w_qs)  # xavier_normal used originally
         init.kaiming_normal_(self.w_ks)  # xavier_normal
         init.kaiming_normal_(self.w_vs)  # xavier_normal
@@ -196,16 +195,14 @@ class PositionwiseFeedForward(nn.Module):
     def __init__(self, d_hid, d_inner_hid, dropout=0.1):
         super(PositionwiseFeedForward, self).__init__()
 
+        # TODO: this has to come from hyperparameters
         self.use_batch_norm = True
-
-        # self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1)  # position-wise
-        # self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
 
         self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1)  # position-wise
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
 
         if self.use_batch_norm:
-            self.layer_norm = nn.BatchNorm1d(d_hid)  # BatchNorm1d(d_hid)
+            self.layer_norm = nn.BatchNorm1d(d_hid) # BatchNorm1d(d_hid)
 
             # other options here
             # nn.GroupNorm(d_hid, d_hid)

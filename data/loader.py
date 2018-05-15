@@ -166,7 +166,7 @@ class DataLoader(object):
 
     def relativate_word_positions(self, positions_list, dpa=None):
         """
-        Recalculate the word positions by decreasing their relativeness based on the distance to
+        Recalculate the word positions by decreasing their relativity based on the distance to
         query or object:
         e.g. input=[0,1,2,3,4,5,5,6] --> output=[0,1,2,3,3,4,4,4]
 

@@ -23,6 +23,7 @@ from utils.vocab import Vocab
 print(torch.__version__)
 print(torch.backends.cudnn.version())
 
+
 import argparse
 # import sys; sys.argv=['']; del sys  # this has to be done if argparse is used in the notebook
 from datetime import datetime
@@ -162,6 +163,7 @@ args = parser.parse_args()
 # improves speed of cuda, is set to False by default due to memory usage
 torch.backends.cudnn.fastest=True
 torch.backends.cudnn.benchmark=True
+# torch.set_num_threads(8)
 
 
 def main():
