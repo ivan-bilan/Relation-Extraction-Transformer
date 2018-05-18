@@ -171,10 +171,15 @@ def main():
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     random.seed(1234)
+
     if args.cpu:
         args.cuda = False
     elif args.cuda:
+        # force random seed for reproducability
+        torch.backends.cudnn.deterministic = True    # new
         torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)     # new
+
     print("i am here")
     # make opt
     opt = vars(args)

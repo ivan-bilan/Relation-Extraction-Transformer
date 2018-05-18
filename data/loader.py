@@ -111,11 +111,14 @@ class DataLoader(object):
 
             # create word positional vector for self-attention
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
+            # print("inst_position", inst_position)
+            obj_positions_single = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
+            # print("obj_positions_single", obj_positions_single)
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
-            obj_positions_single = get_positions(d['obj_start'], d['obj_end'], l)
+            # obj_positions_single = get_positions(d['obj_start'], d['obj_end'], l)
 
             # pass relative positional vectors
             if opt["relative_positions"]:
@@ -132,8 +135,7 @@ class DataLoader(object):
                 # print(obj_positions)
 
                 # obj_positions_orig = obj_positions
-                obj_positions = self.relativate_word_positions(obj_positions, opt["diagonal_positional_attention"])  # opt["diagonal_positional_attention"]
-                obj_positions_single = self.relativate_word_positions(obj_positions_single)
+                obj_positions = self.relativate_word_positions(obj_positions)
 
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)

@@ -123,9 +123,14 @@ class ScaledDotProductAttention(nn.Module):
                 b, i, j = a.size()
                 assert i > j
                 b_s, k, l = a.stride()
+                # left top to right bottom
                 return torch.as_strided(a, (b, i - j, j), (b_s, k, k + 1))
+                # left bottom to right top
+                # a = a[j-1:]
+                # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
 
             attn_pos = batch_stripe(attn_pos.transpose(1, 2))
+            # print(attn_pos.size())
             # unbind the first batch dimension before extracting the diagonal stripe
             # attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
             # attn_pos = torch.stack(attn_pos, 0)

@@ -176,6 +176,12 @@ class Encoder(nn.Module):
 
             # working
 
+            self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+            self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+
+            self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+            self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
+
             # TODO: try n_pos, n_pos*2-1
             self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
             self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
@@ -240,14 +246,23 @@ class Encoder(nn.Module):
 
         elif self.diagonal_positional_attention:
 
+            # first add the obj/subj embeddings to the word embeddings
+            # TODO: try all variants here!, also without any obj/subj encodings
+
+            src_seq = src_seq + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
+
             verbose_sizes = False
 
             if verbose_sizes:
                 print("src_seq.size():", src_seq.size())
                 # TODO: try obj/subj positions
                 print("using diagonal positional encodings 0")
+                print(pe_features[2])
+                print(pe_features[2].size())
 
-            position_dpa = self.position_dpa(pe_features[1])  # src_pos
+            # now we take the modified positional word encodings
+            position_dpa = self.position_dpa(pe_features[2])  # src_pos of size 2n
+
             # position_dpa = self.position_dpa2.forward(pe_features[1])  # src_pos
 
             if verbose_sizes:
