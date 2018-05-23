@@ -145,6 +145,11 @@ class ScaledDotProductAttention(nn.Module):
 
             # print(attn_pos.transpose(1, 2).dim())
 
+            # left top to right bottom
+            # dim=-1
+            # attn_pos = batch_stripe(attn_pos.transpose(1, 2))
+
+            # left bottom to right top
             # dim=-1
             attn_pos = flip(batch_stripe(flip(attn_pos.transpose(1, 2), -1)), -1)
 

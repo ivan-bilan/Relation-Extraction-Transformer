@@ -22,6 +22,7 @@ from utils.vocab import Vocab
 
 print(torch.__version__)
 print(torch.backends.cudnn.version())
+print(torch.version.cuda)
 
 
 import argparse
@@ -37,7 +38,7 @@ parser.add_argument('--emb_dim', type=int, default=300, help='Word embedding dim
 parser.add_argument('--ner_dim', type=int, default=30, help='NER embedding dimension.')
 parser.add_argument('--pos_dim', type=int, default=30, help='POS embedding dimension.')
 parser.add_argument('--hidden_dim', type=int, default=360, help='RNN hidden state size.')              # 200 original
-parser.add_argument('--hidden_self', type=int, default=150,
+parser.add_argument('--hidden_self', type=int, default=130,
                     help='Hidden size for self-attention.')  # n_model*2 in the paper  # used to be 720
 parser.add_argument('--query_size_attn', type=int, default=360,
                     help='Embedding for query size in the positional attention.')  # n_model*2 in the paper
@@ -180,7 +181,6 @@ def main():
         torch.cuda.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)     # new
 
-    print("i am here")
     # make opt
     opt = vars(args)
     opt['num_class'] = len(constant.LABEL_TO_ID)
