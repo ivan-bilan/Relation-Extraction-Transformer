@@ -148,7 +148,13 @@ class ScaledDotProductAttention(nn.Module):
                 strided_result = np.lib.stride_tricks.as_strided(a[..., j-1:, :], (b, i - j, j), (b_s, k, l - k))
                 return torch.from_numpy(strided_result).type(torch.FloatTensor).to("cuda")
 
-            attn_pos = batch_stripe(attn_pos.transpose(1, 2))
+            def flip(x, dim):
+                dim = x.dim() + dim if dim < 0 else dim
+                indices = [slice(None)] * x.dim()
+                indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
+                return x[tuple(indices)]
+
+            attn_pos = flip(batch_stripe(flip(attn_pos.transpose(1, 2), 2)), 2)
 
             # print(attn_pos.size())
 
