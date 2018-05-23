@@ -62,7 +62,7 @@ parser.add_argument('--no-lower', dest='lower', action='store_false')
 parser.set_defaults(lower=False)
 
 parser.add_argument('--weight_no_rel', type=float, default=1.0, help='Weight for no_relation class.')
-parser.add_argument('--weight_rest', type=float, default=1.0, help='Weight for other classes.')
+parser.add_argument('--weight_rest', type=float, default=0.85, help='Weight for other classes.')
 
 parser.add_argument(
     '--self-attn', dest='self_att', action='store_true', help='Use self-attention layer instead of LSTM.', default=True)

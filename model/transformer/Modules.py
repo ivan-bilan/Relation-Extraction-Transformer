@@ -120,20 +120,37 @@ class ScaledDotProductAttention(nn.Module):
                 this implementation also takes into account batched matrices,
                 so the stripe is calculated over a batch x for a matrix of size[x, m, n]
                 """
+                # another solution
+                # a = a[::-1]  # ValueError: negative step not yet supported
+                # do the usual left top to right bottom
+                # return a[::-1]
+
                 b, i, j = a.size()
                 assert i > j
                 b_s, k, l = a.stride()
+
                 # left top to right bottom
                 return torch.as_strided(a, (b, i - j, j), (b_s, k, k + 1))
+
                 # left bottom to right top
-                # a = a[j-1:]
+                # a = a[..., j-1:, :]
                 # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
 
+            def batch_stripe_numpy(a):
+
+                # this doesn't work in the current PyTorch version
+                # since negative strides are not supported
+
+                a = a.cpu().detach().numpy()
+                b, i, j = a.shape
+                assert i >= j
+                b_s, k, l = a.strides
+                strided_result = np.lib.stride_tricks.as_strided(a[..., j-1:, :], (b, i - j, j), (b_s, k, l - k))
+                return torch.from_numpy(strided_result).type(torch.FloatTensor).to("cuda")
+
             attn_pos = batch_stripe(attn_pos.transpose(1, 2))
+
             # print(attn_pos.size())
-            # unbind the first batch dimension before extracting the diagonal stripe
-            # attn_pos = list(map(stripe, torch.unbind(attn_pos.transpose(1, 2), 0)))
-            # attn_pos = torch.stack(attn_pos, 0)
 
             # print(attn_pos.size())
 
@@ -143,6 +160,8 @@ class ScaledDotProductAttention(nn.Module):
                 print(attn_pos.transpose(1, 2).size())
 
             attn = attn + attn_pos.transpose(1, 2)
+
+            # print(attn.size())
 
         if attn_mask is not None:
             # print(attn_mask)
