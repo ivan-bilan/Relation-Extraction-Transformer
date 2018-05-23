@@ -136,25 +136,17 @@ class ScaledDotProductAttention(nn.Module):
                 # a = a[..., j-1:, :]
                 # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
 
-            def batch_stripe_numpy(a):
-
-                # this doesn't work in the current PyTorch version
-                # since negative strides are not supported
-
-                a = a.cpu().detach().numpy()
-                b, i, j = a.shape
-                assert i >= j
-                b_s, k, l = a.strides
-                strided_result = np.lib.stride_tricks.as_strided(a[..., j-1:, :], (b, i - j, j), (b_s, k, l - k))
-                return torch.from_numpy(strided_result).type(torch.FloatTensor).to("cuda")
-
             def flip(x, dim):
+                """ Flip matrix """
                 dim = x.dim() + dim if dim < 0 else dim
                 indices = [slice(None)] * x.dim()
-                indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device=x.device)
+                indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device="cuda")
                 return x[tuple(indices)]
 
-            attn_pos = flip(batch_stripe(flip(attn_pos.transpose(1, 2), 2)), 2)
+            # print(attn_pos.transpose(1, 2).dim())
+
+            # dim=-1
+            attn_pos = flip(batch_stripe(flip(attn_pos.transpose(1, 2), -1)), -1)
 
             # print(attn_pos.size())
 
