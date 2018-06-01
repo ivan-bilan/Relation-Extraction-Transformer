@@ -138,6 +138,10 @@ class ScaledDotProductAttention(nn.Module):
 
             def flip(x, dim):
                 """ Flip matrix """
+
+                # TODO: follow the official release of optimized flip:
+                # https://github.com/pytorch/pytorch/pull/7873
+
                 dim = x.dim() + dim if dim < 0 else dim
                 indices = [slice(None)] * x.dim()
                 indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device="cuda")
@@ -151,9 +155,7 @@ class ScaledDotProductAttention(nn.Module):
 
             # left bottom to right top
             # dim=-1
-            attn_pos = flip(batch_stripe(flip(attn_pos.transpose(1, 2), -1)), -1)
-
-            # print(attn_pos.size())
+            attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
 
             # print(attn_pos.size())
 

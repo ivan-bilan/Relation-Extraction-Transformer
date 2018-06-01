@@ -32,8 +32,8 @@ from datetime import datetime
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--data_dir', type=str, default='C:/dataset/tacred')
-parser.add_argument('--vocab_dir', type=str, default='C:/dataset/vocab')
+parser.add_argument('--data_dir', type=str, default='dataset/tacred')
+parser.add_argument('--vocab_dir', type=str, default='dataset/vocab')
 parser.add_argument('--emb_dim', type=int, default=300, help='Word embedding dimension.')
 parser.add_argument('--ner_dim', type=int, default=30, help='NER embedding dimension.')
 parser.add_argument('--pos_dim', type=int, default=30, help='POS embedding dimension.')
@@ -305,9 +305,22 @@ def main():
 
         # decay schedule # 15 is best!
         # simulate patience of x epochs
-        if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
-           current_lr *= opt['lr_decay']
-           model.update_lr(current_lr)
+
+        do_warmup_trick = False
+
+        if not do_warmup_trick:
+
+            if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
+               current_lr *= opt['lr_decay']
+               model.update_lr(current_lr)
+
+        else:
+            # print("do_warmup_trick")
+
+            # 1 and 5 first worked kind of
+            current_lr = 10 * (360 ** (-0.5) * min(epoch ** (-0.5), epoch * 15 ** (-1.5)))
+            # print("current_lr", current_lr)
+            model.update_lr(current_lr)
 
         dev_f1_history += [dev_f1]
         print("")

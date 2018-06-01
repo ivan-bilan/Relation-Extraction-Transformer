@@ -3,6 +3,7 @@
 import math
 import copy
 import torch
+import torch.nn.init as init
 import torch.nn as nn
 import numpy as np
 from .Constants import *
@@ -177,16 +178,25 @@ class Encoder(nn.Module):
             # working
 
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+            # TODO: is it better to learn new encodings here?
+            # self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+            self.position_enc2.weight.requires_grad = True
 
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
+            # TODO: is it better to learn new encodings here?
+            # self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
+            self.position_enc3.weight.requires_grad = True
 
             # TODO: try n_pos, n_pos*2-1
             self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
-            self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
-            # make sure embeddings are trainable
+
+            # TODO: investigate if we need pos encoding here as well
+            # self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
+            # init.kaiming_normal_(self.position_dpa)
+
+            # make sure embeddings are trainable for dpa
             self.position_dpa.weight.requires_grad = True
+
             # print(self.position_dpa)
             # self.position_dpa2 = PositionalEncodingLookup(d_word_vec//n_head, (n_position*2)-1)
 
@@ -234,7 +244,7 @@ class Encoder(nn.Module):
 
             if self.relative_positions:
                 # add object positions only
-                src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+                src_seq = src_seq + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
             else:
                 # TODO
                 # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions

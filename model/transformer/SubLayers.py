@@ -48,7 +48,8 @@ class MultiHeadAttention(nn.Module):
             # pytorch 0.4
             self.layer_norm = nn.LayerNorm(d_model)
 
-        self.proj = Linear(n_head*d_v, d_model)
+        # TODO: try with , bias=False
+        self.proj = Linear(n_head*d_v, d_model)  # , bias=False
         self.dropout = nn.Dropout(dropout)
 
         # TODO: try # , nonlinearity='relu'

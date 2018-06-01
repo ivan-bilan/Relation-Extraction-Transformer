@@ -204,6 +204,37 @@ class NAdam(Optimizer):
                 return loss
 
 
+class NoamOpt:
+    "Optim wrapper that implements rate."
+
+    # TODO: this leads to errors
+
+    def __init__(self, model_size, factor, warmup, optimizer):
+        self.optimizer = optimizer
+        self._step = 0
+        self.warmup = warmup
+        self.factor = factor
+        self.model_size = model_size
+        self._rate = 0
+
+    def step(self):
+        "Update parameters and rate"
+        self._step += 1
+        rate = self.rate()
+        for p in self.optimizer.param_groups:
+            p['lr'] = rate
+        self._rate = rate
+        self.optimizer.step()
+
+    def rate(self, step=None):
+        "Implement `lrate` above"
+        if step is None:
+            step = self._step
+        return self.factor * \
+               (self.model_size ** (-0.5) *
+                min(step ** (-0.5), step * self.warmup ** (-1.5)))
+
+
 ### torch specific functions
 def get_optimizer(name, parameters, lr):
     if name == 'sgd':
@@ -218,9 +249,13 @@ def get_optimizer(name, parameters, lr):
         # use new adagrad to allow for init accumulator value
         return MyAdagrad(parameters, lr=lr, init_accu_value=0.1)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, betas=(0.9, 0.999), lr=lr, amsgrad=True)
+        return torch.optim.Adam(parameters, betas=(0.9, 0.98), lr=lr, eps=1e-9)  # , amsgrad=True
     elif name == 'adamax':
         return torch.optim.Adamax(parameters, lr=lr)
+    elif name == "noopt_adam":
+        # TODO: doesn't seem to work properly
+        # this comes from http://nlp.seas.harvard.edu/2018/04/03/attention.html
+        return NoamOpt(360, 1, 400, torch.optim.Adam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9))
     else:
         raise Exception("Unsupported optimizer: {}".format(name))
 
