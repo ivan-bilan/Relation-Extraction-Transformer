@@ -318,6 +318,7 @@ def main():
             # print("do_warmup_trick")
 
             # 1 and 5 first worked kind of
+            # 10 and 15
             current_lr = 10 * (360 ** (-0.5) * min(epoch ** (-0.5), epoch * 15 ** (-1.5)))
             # print("current_lr", current_lr)
             model.update_lr(current_lr)

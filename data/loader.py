@@ -112,12 +112,35 @@ class DataLoader(object):
             # create word positional vector for self-attention
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
             # print("inst_position", inst_position)
-            obj_positions_single = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
+
+            # working dpa
+            obj_positions_single2 = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
+            # print(obj_positions_single)
+            # print()
+
+            # max len -1
+            # TODO: change the code in rnn.py if you want to revert this and use the above one
+            obj_positions_single = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
+            # print(obj_positions_single)
+            # print(len(obj_positions_single))
+
+            # sanity check on whether we doubled the size of pos vector correctly
+            if len(obj_positions_single) != len(obj_positions_single2):
+                print(
+                    "FAILED creating relative positions",
+                    len(obj_positions_single2), "95:", len(obj_positions_single), len(inst_position)
+                )
+
+            # print(obj_positions_single)
+            # print(len(obj_positions_single))
+            # print()
+
             # print("obj_positions_single", obj_positions_single)
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
+            # print(obj_positions)
             # obj_positions_single = get_positions(d['obj_start'], d['obj_end'], l)
 
             # pass relative positional vectors
@@ -339,7 +362,6 @@ class DataLoader(object):
         return self.labels
 
     def __len__(self):
-        # return 50
         return len(self.data)
 
     def __getitem__(self, key):
@@ -375,6 +397,8 @@ class DataLoader(object):
 
         subj_positions = get_long_tensor(batch[4], batch_size)  # matrix of positional lists relative to subject
         obj_positions = get_long_tensor(batch[5], batch_size)   # matrix of positional lists relative to object
+
+        # do padding here, it will get the longest sequence and pad the rest
         obj_positions_single = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
 
         src_pos = get_long_tensor(batch[7], batch_size)  # matrix, positional ids for all words in sentence
@@ -397,6 +421,13 @@ def map_to_ids(tokens, vocab):
 
 def get_positions(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
+    # print(start_idx, end_idx, length)
+    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
+
+
+def get_position_modified(start_idx, end_idx, length):
+    """ Get subj/obj position sequence. """
+    # print(start_idx, end_idx, length)
     return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
 
 
