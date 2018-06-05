@@ -10,8 +10,9 @@ import pickle
 
 from utils import constant
 
-random.seed(1234)
-np.random.seed(1234)
+from global_random_seed import RANDOM_SEED
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
 
 def build_embedding(wv_file, vocab, wv_dim):
@@ -68,9 +69,10 @@ class Vocab(object):
             assert word_counter is not None, "word_counter is not provided for vocab creation."
             self.word_counter = word_counter
             if threshold > 1:
-                # remove words that occur less than thres
+                # remove words that occur less than three times
                 self.word_counter = dict([(k,v) for k,v in self.word_counter.items() if v >= threshold])
             self.id2word = sorted(self.word_counter, key=lambda k:self.word_counter[k], reverse=True)
+
             # add special tokens to the beginning
             self.id2word = [constant.PAD_TOKEN, constant.UNK_TOKEN] + self.id2word
             self.word2id = dict([(self.id2word[idx], idx) for idx in range(len(self.id2word))])

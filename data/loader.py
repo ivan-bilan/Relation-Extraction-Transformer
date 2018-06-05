@@ -14,8 +14,11 @@ import numpy as np
 from tqdm import tqdm
 
 from utils import constant, helper, vocab
-
+from global_random_seed import RANDOM_SEED
 PAD = 0
+
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
 
 class DataLoader(object):
@@ -128,7 +131,7 @@ class DataLoader(object):
             if len(obj_positions_single) != len(obj_positions_single2):
                 print(
                     "FAILED creating relative positions",
-                    len(obj_positions_single2), "95:", len(obj_positions_single), len(inst_position)
+                    len(obj_positions_single2), "doubled:", len(obj_positions_single), len(inst_position)
                 )
 
             # print(obj_positions_single)

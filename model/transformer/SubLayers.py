@@ -166,6 +166,7 @@ class MultiHeadAttention(nn.Module):
         outputs = torch.cat(torch.split(outputs, mb_size, dim=0), dim=-1)
 
         # project back to residual size
+        # TODO: some people suggest to use bias=False when projecting!
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
 

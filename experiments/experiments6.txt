@@ -599,4 +599,122 @@ Precision (micro): 66.442%
        F1 (micro): 66.554%
 Prediction scores saved to saved_models/out/test_6.pkl.
 
+
+
+
 ###################################################################################
+
+# folder: trt3
+# epoch 47
+
+# using dpa, but flipped and with -2,-1,0,1,2 pos encoding
+
+
+Running with the following configs:
+        data_dir : dataset/tacred
+        vocab_dir : dataset/vocab
+        emb_dim : 300
+        ner_dim : 30
+        pos_dim : 30
+        hidden_dim : 360
+        hidden_self : 130
+        query_size_attn : 360
+        num_layers : 2
+        num_layers_encoder : 1
+        dropout : 0.4
+        scaled_dropout : 0.1
+        temper_value : 0.5
+        word_dropout : 0.06
+        lstm_dropout : 0.5
+        topn : 10000000000.0
+        lower : False
+        weight_no_rel : 1.0
+        weight_rest : 0.85
+        self_att : True
+        self_att_and_rnn : False
+        use_lemmas : False
+        preload_lemmas : False
+        obj_sub_pos : True
+        use_batch_norm : True
+        diagonal_positional_attention : True
+        relative_positions : True
+        new_residual : True
+        n_head : 3
+        attn : True
+        attn_dim : 200
+        pe_dim : 30
+        lr : 0.1
+        lr_decay : 0.9
+        decay_epoch : 15
+        optim : sgd
+        num_epoch : 100
+        batch_size : 50
+        max_grad_norm : 5.0
+        log_step : 400
+        log : logs.txt
+        save_epoch : 1
+        save_dir : ./saved_models
+        id : trt3
+        info :
+        seed : 1234
+        cuda : True
+        cpu : False
+        num_class : 42
+        vocab_size : 55950
+        model_save_dir : ./saved_models/trt3
+
+
+Per-relation statistics:
+org:alternate_names                  P:  74.14%  R:  80.58%  F1:  77.23%  #: 242
+org:city_of_headquarters             P:  67.54%  R:  81.91%  F1:  74.04%  #: 94
+org:country_of_headquarters          P:  59.76%  R:  39.84%  F1:  47.80%  #: 123
+org:dissolved                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 4
+org:founded                          P:  82.00%  R:  87.23%  F1:  84.54%  #: 47
+org:founded_by                       P:  69.77%  R:  33.71%  F1:  45.45%  #: 89
+org:member_of                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 36
+org:members                          P:   0.00%  R:   0.00%  F1:   0.00%  #: 41
+org:number_of_employees/members      P:  30.77%  R:  72.73%  F1:  43.24%  #: 22
+org:parents                          P:  32.14%  R:  11.84%  F1:  17.31%  #: 76
+org:political/religious_affiliation  P:  30.00%  R:  35.29%  F1:  32.43%  #: 17
+org:shareholders                     P: 100.00%  R:  33.33%  F1:  50.00%  #: 15
+org:stateorprovince_of_headquarters  P:  62.86%  R:  75.86%  F1:  68.75%  #: 58
+org:subsidiaries                     P:  35.90%  R:  26.92%  F1:  30.77%  #: 52
+org:top_members/employees            P:  69.50%  R:  78.00%  F1:  73.50%  #: 409
+org:website                          P:  68.75%  R:  91.67%  F1:  78.57%  #: 36
+per:age                              P:  86.59%  R:  88.85%  F1:  87.71%  #: 269
+per:alternate_names                  P:   0.00%  R:   0.00%  F1:   0.00%  #: 13
+per:cause_of_death                   P:  57.58%  R:  32.76%  F1:  41.76%  #: 58
+per:charges                          P:  63.01%  R:  87.20%  F1:  73.15%  #: 125
+per:children                         P:  48.78%  R:  48.78%  F1:  48.78%  #: 41
+per:cities_of_residence              P:  54.80%  R:  58.80%  F1:  56.73%  #: 233
+per:city_of_birth                    P:  66.67%  R:  22.22%  F1:  33.33%  #: 9
+per:city_of_death                    P:  83.33%  R:  13.89%  F1:  23.81%  #: 36
+per:countries_of_residence           P:  58.55%  R:  44.72%  F1:  50.71%  #: 199
+per:country_of_birth                 P:  28.57%  R:  22.22%  F1:  25.00%  #: 9
+per:country_of_death                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 16
+per:date_of_birth                    P:  80.00%  R:  80.00%  F1:  80.00%  #: 10
+per:date_of_death                    P:  58.33%  R:  56.45%  F1:  57.38%  #: 62
+per:employee_of                      P:  68.93%  R:  69.52%  F1:  69.22%  #: 351
+per:origin                           P:  72.33%  R:  70.12%  F1:  71.21%  #: 164
+per:other_family                     P:  57.89%  R:  37.50%  F1:  45.52%  #: 88
+per:parents                          P:  59.48%  R:  62.16%  F1:  60.79%  #: 111
+per:religion                         P:  50.00%  R:  66.67%  F1:  57.14%  #: 60
+per:schools_attended                 P:  55.00%  R:  59.46%  F1:  57.14%  #: 37
+per:siblings                         P:  70.15%  R:  68.12%  F1:  69.12%  #: 69
+per:spouse                           P:  51.65%  R:  64.38%  F1:  57.32%  #: 73
+per:stateorprovince_of_birth         P:  38.46%  R:  45.45%  F1:  41.67%  #: 11
+per:stateorprovince_of_death         P:  46.15%  R:  40.00%  F1:  42.86%  #: 15
+per:stateorprovinces_of_residence    P:  71.43%  R:  41.24%  F1:  52.29%  #: 97
+per:title                            P:  72.20%  R:  89.62%  F1:  79.97%  #: 626
+
+Final Score:
+Calculating Precision: correct_by_relation= 2732.0 / guessed_by_relation= 4111.0
+Calculating Recall: correct_by_relation= 2732.0 / gold_by_relation= 4143.0
+only_non_relation: 4143.0
+Precision (micro): 66.456%
+   Recall (micro): 65.943%
+       F1 (micro): 66.198%
+Prediction scores saved to saved_models/out/test_6.pkl.
+Evaluation ended.
+
+

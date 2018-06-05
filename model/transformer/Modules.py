@@ -3,6 +3,9 @@ import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
 
+from global_random_seed import RANDOM_SEED
+np.random.seed(RANDOM_SEED)
+
 
 class Linear(nn.Module):
     ''' Simple Linear layer with xavier init '''
@@ -23,9 +26,7 @@ class Bottle(nn.Module):
             return super(Bottle, self).forward(input)
 
         size = input.size()[:2]
-
         out = super(Bottle, self).forward(input.view(size[0]*size[1], -1))
-
         return out.view(size[0], size[1], -1)
 
 
@@ -86,7 +87,7 @@ class ScaledDotProductAttention(nn.Module):
         # add temper as hyperparameter
         self.temper = np.power(d_model, temper_value)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
-        self.softmax = BottleSoftmax(dim=1)  # ? -1
+        self.softmax = BottleSoftmax(dim=-1)  # ? -1
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
@@ -136,7 +137,7 @@ class ScaledDotProductAttention(nn.Module):
                 # a = a[..., j-1:, :]
                 # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
 
-            def flip(x, dim):
+            def flip_old(x, dim):
                 """ Flip matrix """
 
                 # TODO: follow the official release of optimized flip:
@@ -146,6 +147,46 @@ class ScaledDotProductAttention(nn.Module):
                 indices = [slice(None)] * x.dim()
                 indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device="cuda")
                 return x[tuple(indices)]
+
+            def multi_meshgrid(*args):
+                """
+                Creates a meshgrid from possibly many
+                elements (instead of only 2).
+                Returns a nd tensor with as many dimensions
+                as there are arguments
+                """
+                args = list(args)
+                template = [1 for _ in args]
+                for i in range(len(args)):
+                    n = args[i].shape[0]
+                    template_copy = template.copy()
+                    template_copy[i] = n
+                    args[i] = args[i].view(*template_copy)
+                    # there will be some broadcast magic going on
+                return tuple(args)
+
+            def flip(tensor, dims):
+                """
+                This function should be in native PyTorch hopefully after 0.4
+                :param tensor:
+                :param dims:
+                :return:
+                """
+                if not isinstance(dims, (tuple, list)):
+                    dims = [dims]
+                indices = [torch.arange(tensor.shape[dim] - 1, -1, -1,
+                                        dtype=torch.long, device="cuda") for dim in dims]
+                multi_indices = multi_meshgrid(*indices)
+                final_indices = [slice(i) for i in tensor.shape]
+                for i, dim in enumerate(dims):
+                    final_indices[dim] = multi_indices[i]
+                flipped = tensor[final_indices]
+
+                # TODO
+                # need to permute the final dimensions
+                # if dims is not consecutive
+
+                return flipped
 
             # print(attn_pos.transpose(1, 2).dim())
 

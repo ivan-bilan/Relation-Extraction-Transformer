@@ -7,11 +7,11 @@ from torch import nn, optim
 from torch.optim import Optimizer
 
 
-### class
+# class
 class MyAdagrad(Optimizer):
-    """My modification of the Adagrad optimizer that allows to specify an initial
+    """Modification of the Adagrad optimizer that allows to specify an initial
     accumulater value. This mimics the behavior of the default Adagrad implementation
-    in Tensorflow. The default PyTorch Adagrad uses 0 for initial acculmulator value.
+    in Tensorflow. The default PyTorch Adagrad uses 0 for initial accumulator value.
 
     Arguments:
         params (iterable): iterable of parameters to optimize or dicts defining
@@ -168,9 +168,7 @@ class NAdam(Optimizer):
                 exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
 
                 beta1, beta2 = group['betas']
-
                 schedule_decay = group['schedule_decay']
-
                 state['step'] += 1
 
                 if group['weight_decay'] != 0:
@@ -226,6 +224,9 @@ class NoamOpt:
         self._rate = rate
         self.optimizer.step()
 
+    def zero_grad(self):
+        self.optimizer.zero_grad()
+
     def rate(self, step=None):
         "Implement `lrate` above"
         if step is None:
@@ -235,7 +236,7 @@ class NoamOpt:
                 min(step ** (-0.5), step * self.warmup ** (-1.5)))
 
 
-### torch specific functions
+# torch specific functions
 def get_optimizer(name, parameters, lr):
     if name == 'sgd':
         # TODO: test momentum and weight_decay
@@ -249,12 +250,14 @@ def get_optimizer(name, parameters, lr):
         # use new adagrad to allow for init accumulator value
         return MyAdagrad(parameters, lr=lr, init_accu_value=0.1)
     elif name == 'adam':
-        return torch.optim.Adam(parameters, betas=(0.9, 0.98), lr=lr, eps=1e-9)  # , amsgrad=True
+        return torch.optim.Adam(parameters, betas=(0.9, 0.98), lr=lr, eps=1e-9)  # TODO: set amsgrad=True
     elif name == 'adamax':
         return torch.optim.Adamax(parameters, lr=lr)
+    elif name == "noopt_nadam":
+        return NAdam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9)
     elif name == "noopt_adam":
-        # TODO: doesn't seem to work properly
         # this comes from http://nlp.seas.harvard.edu/2018/04/03/attention.html
+        # but with a modification of using a zero_grad function in the class
         return NoamOpt(360, 1, 400, torch.optim.Adam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9))
     else:
         raise Exception("Unsupported optimizer: {}".format(name))

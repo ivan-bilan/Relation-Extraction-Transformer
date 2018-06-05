@@ -11,6 +11,9 @@ from torch.autograd import Variable
 from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer
 
+from global_random_seed import RANDOM_SEED
+np.random.seed(RANDOM_SEED)
+
 
 class Embeddings(nn.Module):
 
@@ -179,12 +182,12 @@ class Encoder(nn.Module):
 
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             # TODO: is it better to learn new encodings here?
-            # self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+            self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
             self.position_enc2.weight.requires_grad = True
 
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             # TODO: is it better to learn new encodings here?
-            # self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
+            self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
             self.position_enc3.weight.requires_grad = True
 
             # TODO: try n_pos, n_pos*2-1
@@ -200,7 +203,9 @@ class Encoder(nn.Module):
             # print(self.position_dpa)
             # self.position_dpa2 = PositionalEncodingLookup(d_word_vec//n_head, (n_position*2)-1)
 
-        # this is for self-learned embeddings?
+        # this is for self-learned embeddings
+        # in the original paper they don't use pre-trained embeddings
+        # since we use glove, we skip this step
         # self.src_word_emb = nn.Embedding(n_src_vocab, d_word_vec, padding_idx=PAD)
 
         # use deep copy based on:
@@ -221,9 +226,12 @@ class Encoder(nn.Module):
             for _ in range(n_layers)])
 
     def forward(self, enc_non_embedded, src_seq, src_pos, pe_features):
+
         # original use: https://github.com/jadore801120/attention-is-all-you-need-pytorch
 
         # Word embedding look up, already done in rnn.py
+        # in the original paper they don't use pre-trained embeddings
+        # since we use glove, we skip this step
         # enc_input = self.src_word_emb(src_seq)
 
         # TODO: try adding vectors (word vec + pos vec) instead of just appending them
@@ -259,7 +267,7 @@ class Encoder(nn.Module):
             # first add the obj/subj embeddings to the word embeddings
             # TODO: try all variants here!, also without any obj/subj encodings
 
-            src_seq = src_seq + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
+            src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
 
             verbose_sizes = False
 

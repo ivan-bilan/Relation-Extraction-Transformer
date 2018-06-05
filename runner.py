@@ -14,20 +14,25 @@ from shutil import copyfile
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+from global_random_seed import RANDOM_SEED
+
+# this doesn't seem to work any better than what we have
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from data.loader import DataLoader
 from model.rnn import RelationModel
 from utils import scorer, constant, helper
 from utils.vocab import Vocab
 
-print(torch.__version__)
-print(torch.backends.cudnn.version())
-print(torch.version.cuda)
+# print out what PyTorch Version we are using
+print()
+print("Current PyTorch Version:", torch.__version__)
+print("Current CuDNN Version:", torch.backends.cudnn.version())
+print("Current Cuda Version:", torch.version.cuda)
+print()
 
-
-import argparse
+# do this if you run this code in a Notebook
 # import sys; sys.argv=['']; del sys  # this has to be done if argparse is used in the notebook
-from datetime import datetime
 
 
 parser = argparse.ArgumentParser()
@@ -50,9 +55,10 @@ parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn d
 parser.add_argument('--scaled_dropout', type=float, default=0.1, help='Input and scaled dropout rate.')   # 0.1 original
 parser.add_argument('--temper_value', type=float, default=0.5, help='Temper value for Scaled Attention.') # 0.5 original
 
-parser.add_argument('--word_dropout', type=float, default=0.06,                                      # 0.04
-                    help='The rate at which randomly set a word to UNK.'
-                   )
+parser.add_argument(
+    '--word_dropout', type=float, default=0.06,                                      # 0.04
+    help='The rate at which randomly set a word to UNK.'
+)
 
 parser.add_argument('--lstm_dropout', type=float, default=0.5, help='Input and RNN dropout rate.')
 parser.add_argument('--topn', type=int, default=1e10, help='Only finetune top N embeddings.')
@@ -112,8 +118,10 @@ parser.add_argument('--no_diagonal_positional_attention', dest='diagonal_positio
 parser.set_defaults(diagonal_positional_attention=False)
 
 # relative positional vectors
-parser.add_argument('--relative_positions', dest='relative_positions', action='store_true', 
-    help='Use relative positions for subj/obj positional vectors.', default=True)
+parser.add_argument(
+    '--relative_positions', dest='relative_positions', action='store_true',
+    help='Use relative positions for subj/obj positional vectors.', default=True
+)
 parser.add_argument('--no_relative_positions', dest='relative_positions', action='store_false')
 parser.set_defaults(relative_positions=True)
 
@@ -155,31 +163,37 @@ parser.add_argument(
    )
 
 parser.add_argument('--info', type=str, default='', help='Optional info for the experiment.')
-parser.add_argument('--seed', type=int, default=1234)
+
+# TODO: careful with this one
+# this is still WIP, we want to set random seed for all files
+# so instead set the random seed in the global_random_seed.py file
+# TODO: after all this still doesn't seem to work!!!
+parser.add_argument('--seed', type=int, default=RANDOM_SEED)
 parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
 parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 
 args = parser.parse_args()
 
-# improves speed of cuda, is set to False by default due to memory usage
-torch.backends.cudnn.fastest=True
-torch.backends.cudnn.benchmark=True
-# torch.set_num_threads(8)
+# improves speed of cuda, is set to False by default due to high memory usage
+torch.backends.cudnn.fastest = True
+torch.backends.cudnn.benchmark = True
+# torch.set_num_threads(8)   # TODO: this doesn't seem to do anything
 
 
 def main():
-    # run training in main() so that the dataloader runs in a multiprocessing mode regardless of the OS used
+    # set top-level random seeds
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
-    random.seed(1234)
+    random.seed(args.seed)
 
     if args.cpu:
         args.cuda = False
     elif args.cuda:
-        # force random seed for reproducability
-        torch.backends.cudnn.deterministic = True    # new
+        # force random seed for reproducibility
+        # also apply same seed to numpy in every file
+        torch.backends.cudnn.deterministic = True
         torch.cuda.manual_seed(args.seed)
-        torch.cuda.manual_seed_all(args.seed)     # new
+        torch.cuda.manual_seed_all(args.seed)
 
     # make opt
     opt = vars(args)
@@ -189,7 +203,12 @@ def main():
     vocab_file = opt['vocab_dir'] + '/vocab.pkl'
     vocab = Vocab(vocab_file, load=True)
 
+    # in some previous experiments we saw that lower vocab size can improve performance
+    # but it was in a completely different project although on the same data
+    # here it seems it's much harder to get this to work
+    # uncomment the following line if this is solved:
     # new_vocab_size = 30000
+
     opt['vocab_size'] = vocab.size
     emb_file = opt['vocab_dir'] + '/embedding.npy'
     emb_matrix = np.load(emb_file)
@@ -225,11 +244,12 @@ def main():
     current_lr = opt['lr']
 
     global_step = 0
-    global_start_time = time.time()
+
     format_str = '{}: step {}/{} (epoch {}/{}), loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
     max_steps = len(train_batch) * opt['num_epoch']
 
     # setup the scheduler for lr decay
+    # this doesn't seem to work well compared to what we already have
     # scheduler = ReduceLROnPlateau(model.optimizer, mode='min', factor=opt['lr_decay'], patience=1)
 
     # start training
@@ -253,12 +273,13 @@ def main():
 
         train_loss = 0
         for i, batch in enumerate(train_batch):
+
             start_time = time.time()
             global_step += 1
 
             loss = model.update(batch)
+            train_loss += float(loss)
 
-            train_loss += loss
             if global_step % opt['log_step'] == 0:
                 duration = time.time() - start_time
                 print(
@@ -276,7 +297,8 @@ def main():
         for i, batch in enumerate(dev_batch):
             preds, _, loss = model.predict(batch)
             predictions += preds
-            dev_loss += loss
+            dev_loss += float(loss)
+            del loss
 
         predictions = [id2label[p] for p in predictions]
         dev_p, dev_r, dev_f1 = scorer.score(dev_batch.gold(), predictions)
@@ -301,27 +323,32 @@ def main():
             os.remove(model_file)
 
         # reduce learning rate if it stagnates by a certain decay rate and within given epoch patience
+        # this for some reason works worth than the implementation we have afterwards
         # scheduler.step(dev_loss)
 
-        # decay schedule # 15 is best!
-        # simulate patience of x epochs
+        if opt["optim"] != "noopt_adam" and opt["optim"] != "noopt_nadam":
 
-        do_warmup_trick = False
+            # do warm_up_for sgd only instead of adam
+            do_warmup_trick = False
 
-        if not do_warmup_trick:
+            if not do_warmup_trick:
 
-            if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
-               current_lr *= opt['lr_decay']
-               model.update_lr(current_lr)
+                # decay schedule # 15 is best!
+                # simulate patience of x epochs
+                if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
+                    current_lr *= opt['lr_decay']
+                    model.update_lr(current_lr)
 
-        else:
-            # print("do_warmup_trick")
+            else:
+                # print("do_warmup_trick")
 
-            # 1 and 5 first worked kind of
-            # 10 and 15
-            current_lr = 10 * (360 ** (-0.5) * min(epoch ** (-0.5), epoch * 15 ** (-1.5)))
-            # print("current_lr", current_lr)
-            model.update_lr(current_lr)
+                # 1 and 5 first worked kind of
+                # 10 and 15
+                current_lr = 10 * (360 ** (-0.5) * min(epoch ** (-0.5), epoch * 15 ** (-1.5)))
+                # print("current_lr", current_lr)
+                model.update_lr(current_lr)
+
+        # else, update the learning rate in torch_utils.py
 
         dev_f1_history += [dev_f1]
         print("")

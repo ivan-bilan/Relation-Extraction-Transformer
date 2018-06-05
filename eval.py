@@ -11,6 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
 
+from global_random_seed import RANDOM_SEED
+
 from data.loader import DataLoader
 from model.rnn import RelationModel
 from utils import torch_utils, scorer, constant, helper
@@ -30,18 +32,23 @@ parser.add_argument('--out', type=str,
                     help="Save model predictions to this dir."
 )
 
-parser.add_argument('--seed', type=int, default=1234)
+parser.add_argument('--seed', type=int, default=RANDOM_SEED)
 parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
 parser.add_argument('--cpu', action='store_true')
 
 args = parser.parse_args()
 
+# set top level random seeds
 torch.manual_seed(args.seed)
-random.seed(1234)
+random.seed(args.seed)
+
 if args.cpu:
     args.cuda = False
 elif args.cuda:
+    # set random seed for cuda as well
+    torch.backends.cudnn.deterministic = True
     torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 
 # load opt
 model_file = args.model_dir + '/' + args.model

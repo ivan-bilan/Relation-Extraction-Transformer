@@ -1,3 +1,6 @@
+python runner.py --id trt4 --diagonal_positional_attention --hidden_self 1048 --pe_dim 106 --n_head 8 --num_epoch 200 --num_layers_encoder 2 --dropout 0.1
+
+
 src_seq_type <class 'torch.autograd.variable.Variable'> torch.Size([64, 27])
 J:\Anaconda_Python3_6\envs\cuda\lib\site-packages\torch\nn\modules\module.py:325: UserWarning: Implicit dimension choice for softmax has been deprecated. Change the call to include dim=X as an argument.
 src_seq Variable containing:ut, **kwargs)
