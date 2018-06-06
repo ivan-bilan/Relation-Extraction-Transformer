@@ -8,6 +8,12 @@ from .Modules import ScaledDotProductAttention
 # from transformer.Modules import BottleLayerNormalization as LayerNormalization
 from .Modules import LayerNormalization
 
+from global_random_seed import RANDOM_SEED
+torch.manual_seed(RANDOM_SEED)
+torch.backends.cudnn.deterministic = True
+torch.cuda.manual_seed(RANDOM_SEED)
+torch.cuda.manual_seed_all(RANDOM_SEED)
+
 
 class MultiHeadAttention(nn.Module):
     ''' Multi-Head Attention module '''

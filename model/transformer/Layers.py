@@ -5,6 +5,13 @@ import torch.nn as nn
 from .Constants import *
 from .SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
+from global_random_seed import RANDOM_SEED
+np.random.seed(RANDOM_SEED)
+torch.manual_seed(RANDOM_SEED)
+torch.backends.cudnn.deterministic = True
+torch.cuda.manual_seed(RANDOM_SEED)
+torch.cuda.manual_seed_all(RANDOM_SEED)
+
 
 class EncoderLayer(nn.Module):
     """

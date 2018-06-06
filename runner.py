@@ -168,7 +168,8 @@ parser.add_argument('--info', type=str, default='', help='Optional info for the 
 # this is still WIP, we want to set random seed for all files
 # so instead set the random seed in the global_random_seed.py file
 # TODO: after all this still doesn't seem to work!!!
-parser.add_argument('--seed', type=int, default=RANDOM_SEED)
+parser.add_argument('--seed', type=int, default=1234)
+# TODO: write the seed into a file and let it be read from there in all files
 parser.add_argument('--cuda', type=bool, default=torch.cuda.is_available())
 parser.add_argument('--cpu', action='store_true', help='Ignore CUDA.')
 

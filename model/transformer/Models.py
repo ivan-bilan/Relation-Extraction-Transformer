@@ -12,7 +12,13 @@ from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer
 
 from global_random_seed import RANDOM_SEED
+
+# make everything reproducable
 np.random.seed(RANDOM_SEED)
+torch.manual_seed(RANDOM_SEED)
+torch.backends.cudnn.deterministic = True
+torch.cuda.manual_seed(RANDOM_SEED)
+torch.cuda.manual_seed_all(RANDOM_SEED)
 
 
 class Embeddings(nn.Module):
