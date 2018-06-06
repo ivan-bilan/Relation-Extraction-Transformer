@@ -13,7 +13,7 @@ from .Layers import EncoderLayer
 
 from global_random_seed import RANDOM_SEED
 
-# make everything reproducable
+# make everything reproducible
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 torch.backends.cudnn.deterministic = True
