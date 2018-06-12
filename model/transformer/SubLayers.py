@@ -48,6 +48,7 @@ class MultiHeadAttention(nn.Module):
 
         if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)
+            # self.layer_norm = nn.GroupNorm(d_model, 42)
         else:  # layer norm
             # pytorch 0.3.1
             # self.layer_norm = LayerNormalization(d_model)
@@ -210,10 +211,10 @@ class PositionwiseFeedForward(nn.Module):
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
 
         if self.use_batch_norm:
-            self.layer_norm = nn.BatchNorm1d(d_hid) # BatchNorm1d(d_hid)
+            self.layer_norm = nn.BatchNorm1d(d_hid)  # BatchNorm1d(d_hid)
 
             # other options here
-            # nn.GroupNorm(d_hid, d_hid)
+            # self.layer_norm = nn.GroupNorm(d_hid, d_hid)
             # nn.BatchNorm1d(d_hid)
         else:
             # use the initially provided layer norm

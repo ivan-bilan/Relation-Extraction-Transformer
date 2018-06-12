@@ -74,13 +74,13 @@ class DataLoader(object):
 
         lemmatized_tokens = list()
         if opt["preload_lemmas"] and opt["use_lemmas"]:
-            if len(data) == 75050 and opt["preload_lemmas"]:
+            if len(data) == 68124 and opt["preload_lemmas"]:
                 with open('dataset/spacy_lemmas/train_lemmatized.pkl', 'rb') as f:
                     lemmatized_tokens = pickle.load(f)
-            elif len(data) == 25764 and opt["preload_lemmas"]:
+            elif len(data) == 22631 and opt["preload_lemmas"]:
                 with open('dataset/spacy_lemmas/dev_lemmatized.pkl', 'rb') as f:
                     lemmatized_tokens = pickle.load(f)
-            elif len(data) == 18660 and opt["preload_lemmas"]:
+            elif len(data) == 15509 and opt["preload_lemmas"]:
                 with open('dataset/spacy_lemmas/test_lemmatized.pkl', 'rb') as f:
                     lemmatized_tokens = pickle.load(f)
             print("loading lemmatized tokens...")
@@ -185,14 +185,14 @@ class DataLoader(object):
                           ]
 
         # pickle spacy lemmatized text
-        if len(data) == 75050 and opt["use_lemmas"] and not opt["preload_lemmas"]:
+        if len(data) == 68124 and opt["use_lemmas"] and not opt["preload_lemmas"]:
             print("saving to pickle...")
             with open('dataset/spacy_lemmas/train_lemmatized.pkl', 'wb') as f:
                 pickle.dump(lemmatized_tokens, f)
-        elif len(data) == 25764 and opt["use_lemmas"] and not opt["preload_lemmas"]:
+        elif len(data) == 22631 and opt["use_lemmas"] and not opt["preload_lemmas"]:
             with open('dataset/spacy_lemmas/dev_lemmatized.pkl', 'wb') as f:
                 pickle.dump(lemmatized_tokens, f)
-        elif len(data) == 18660 and opt["use_lemmas"] and not opt["preload_lemmas"]:
+        elif len(data) == 15509 and opt["use_lemmas"] and not opt["preload_lemmas"]:
             with open('dataset/spacy_lemmas/test_lemmatized.pkl', 'wb') as f:
                 pickle.dump(lemmatized_tokens, f)
 

@@ -258,7 +258,7 @@ class Encoder(nn.Module):
 
             if self.relative_positions:
                 # add object positions only
-                src_seq = src_seq + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
+                src_seq = src_seq + self.position_enc2(pe_features[1]) # + self.position_enc3(pe_features[0])
             else:
                 # TODO
                 # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
