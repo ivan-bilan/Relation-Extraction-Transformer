@@ -520,3 +520,147 @@ Evaluation ended.
 
 
 
+
+# with weight_rest 1.0
+
+
+$ python eval.py --model_dir saved_models/x6 --model checkpoint_epoch_70.pt
+Loading model from saved_models/x6/checkpoint_epoch_70.pt
+Number of heads:  3
+d_v and d_k:  120.0
+Fine-tune all embeddings.
+Using weights [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+Vocab size 55950 loaded from file
+Loading data from dataset/tacred/test.json with batch size 50...
+100%|██████████| 15509/15509 [00:01<00:00, 12817.34it/s]
+311 batches created for dataset/tacred/test.json
+
+Running with the following configs:
+        data_dir : dataset/tacred
+        vocab_dir : dataset/vocab
+        emb_dim : 300
+        ner_dim : 30
+        pos_dim : 30
+        hidden_dim : 360
+        hidden_self : 130
+        query_size_attn : 360
+        num_layers : 2
+        num_layers_encoder : 1
+        dropout : 0.4
+        scaled_dropout : 0.1
+        temper_value : 0.5
+        word_dropout : 0.06
+        lstm_dropout : 0.5
+        topn : 10000000000.0
+        lower : False
+        weight_no_rel : 1.0
+        weight_rest : 1.0
+        self_att : True
+        self_att_and_rnn : False
+        use_lemmas : False
+        preload_lemmas : False
+        obj_sub_pos : True
+        use_batch_norm : True
+        diagonal_positional_attention : True
+        relative_positions : True
+        new_residual : True
+        n_head : 3
+        attn : True
+        attn_dim : 200
+        pe_dim : 30
+        lr : 0.1
+        lr_decay : 0.9
+        decay_epoch : 15
+        optim : sgd
+        num_epoch : 100
+        batch_size : 50
+        max_grad_norm : 5.0
+        log_step : 400
+        log : logs.txt
+        save_epoch : 10
+        save_dir : ./saved_models
+        id : x6
+        info :
+        seed : 1234
+        cuda : True
+        cpu : False
+        num_class : 42
+        vocab_size : 55950
+        model_save_dir : ./saved_models/x6
+
+
+Per-relation statistics:
+org:alternate_names                  P:  75.91%  R:  78.40%  F1:  77.14%  #: 213
+org:city_of_headquarters             P:  69.15%  R:  79.27%  F1:  73.86%  #: 82
+org:country_of_headquarters          P:  61.84%  R:  43.52%  F1:  51.09%  #: 108
+org:dissolved                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 2
+org:founded                          P:  82.05%  R:  86.49%  F1:  84.21%  #: 37
+org:founded_by                       P:  68.57%  R:  35.29%  F1:  46.60%  #: 68
+org:member_of                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 18
+org:members                          P:  40.00%  R:   6.45%  F1:  11.11%  #: 31
+org:number_of_employees/members      P:  63.64%  R:  73.68%  F1:  68.29%  #: 19
+org:parents                          P:  37.50%  R:  14.52%  F1:  20.93%  #: 62
+org:political/religious_affiliation  P:  24.24%  R:  80.00%  F1:  37.21%  #: 10
+org:shareholders                     P: 100.00%  R:  30.77%  F1:  47.06%  #: 13
+org:stateorprovince_of_headquarters  P:  70.91%  R:  76.47%  F1:  73.58%  #: 51
+org:subsidiaries                     P:  46.15%  R:  27.27%  F1:  34.29%  #: 44
+org:top_members/employees            P:  65.70%  R:  84.68%  F1:  73.99%  #: 346
+org:website                          P:  53.33%  R:  92.31%  F1:  67.61%  #: 26
+per:age                              P:  82.17%  R:  94.50%  F1:  87.91%  #: 200
+per:alternate_names                  P:   0.00%  R:   0.00%  F1:   0.00%  #: 11
+per:cause_of_death                   P:  61.11%  R:  42.31%  F1:  50.00%  #: 52
+per:charges                          P:  66.20%  R:  91.26%  F1:  76.73%  #: 103
+per:children                         P:  32.65%  R:  43.24%  F1:  37.21%  #: 37
+per:cities_of_residence              P:  50.83%  R:  65.08%  F1:  57.08%  #: 189
+per:city_of_birth                    P:  50.00%  R:  20.00%  F1:  28.57%  #: 5
+per:city_of_death                    P: 100.00%  R:  32.14%  F1:  48.65%  #: 28
+per:countries_of_residence           P:  45.05%  R:  55.41%  F1:  49.70%  #: 148
+per:country_of_birth                 P:   0.00%  R:   0.00%  F1:   0.00%  #: 5
+per:country_of_death                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 9
+per:date_of_birth                    P:  70.00%  R:  77.78%  F1:  73.68%  #: 9
+per:date_of_death                    P:  67.65%  R:  42.59%  F1:  52.27%  #: 54
+per:employee_of                      P:  65.14%  R:  70.08%  F1:  67.52%  #: 264
+per:origin                           P:  59.15%  R:  63.64%  F1:  61.31%  #: 132
+per:other_family                     P:  64.44%  R:  48.33%  F1:  55.24%  #: 60
+per:parents                          P:  60.71%  R:  57.95%  F1:  59.30%  #: 88
+per:religion                         P:  46.48%  R:  70.21%  F1:  55.93%  #: 47
+per:schools_attended                 P:  66.67%  R:  60.00%  F1:  63.16%  #: 30
+per:siblings                         P:  66.67%  R:  69.09%  F1:  67.86%  #: 55
+per:spouse                           P:  53.01%  R:  66.67%  F1:  59.06%  #: 66
+per:stateorprovince_of_birth         P:  50.00%  R:  50.00%  F1:  50.00%  #: 8
+per:stateorprovince_of_death         P:  50.00%  R:  28.57%  F1:  36.36%  #: 14
+per:stateorprovinces_of_residence    P:  61.36%  R:  66.67%  F1:  63.91%  #: 81
+per:title                            P:  75.35%  R:  86.20%  F1:  80.41%  #: 500
+
+Final Score:
+Calculating Precision: correct_by_relation= 2281.0 / guessed_by_relation= 3532.0
+Calculating Recall: correct_by_relation= 2281.0 / gold_by_relation= 3325.0
+only_non_relation: 3325.0
+Precision (micro): 64.581%
+   Recall (micro): 68.602%
+       F1 (micro): 66.531%
+Prediction scores saved to saved_models/out/test_6.pkl.
+Evaluation ended.
+(cuda2)
+
+
+# epoch 60!
+
+
+##################################################################################################
+
+for reference:
+
+self attention + lstm
+Final Score:
+Calculating Precision: correct_by_relation= 2099.0 / guessed_by_relation= 3184.0
+Calculating Recall: correct_by_relation= 2099.0 / gold_by_relation= 3325.0
+only_non_relation: 3325.0
+Precision (micro): 65.923%
+   Recall (micro): 63.128%
+       F1 (micro): 64.495%
+Prediction scores saved to saved_models/out/test_6.pkl.
+Evaluation ended.
+
+
+###################################################################################################

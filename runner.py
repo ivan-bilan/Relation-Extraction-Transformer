@@ -69,7 +69,7 @@ parser.add_argument('--no-lower', dest='lower', action='store_false')
 parser.set_defaults(lower=False)
 
 parser.add_argument('--weight_no_rel', type=float, default=1.0, help='Weight for no_relation class.')
-parser.add_argument('--weight_rest', type=float, default=0.85, help='Weight for other classes.')
+parser.add_argument('--weight_rest', type=float, default=1.0, help='Weight for other classes.')
 
 parser.add_argument(
     '--self-attn', dest='self_att', action='store_true', help='Use self-attention layer instead of LSTM.', default=True)
@@ -115,7 +115,7 @@ parser.set_defaults(use_batch_norm=True)
 parser.add_argument('--diagonal_positional_attention', dest='diagonal_positional_attention', action='store_true',
     help='Use diagonal attention.', default=True)
 parser.add_argument('--no_diagonal_positional_attention', dest='diagonal_positional_attention', action='store_false')
-parser.set_defaults(diagonal_positional_attention=False)
+parser.set_defaults(diagonal_positional_attention=True)
 
 # relative positional vectors
 parser.add_argument(
@@ -146,7 +146,7 @@ parser.add_argument('--lr_decay', type=float, default=0.9)                  # lr
 parser.add_argument('--decay_epoch', type=int, default=15, help='Start LR decay from this epoch.')
 
 parser.add_argument('--optim', type=str, default='sgd', help='sgd, asgd, adagrad, adam, nadam or adamax.')    # sgd original
-parser.add_argument('--num_epoch', type=int, default=100)                                           # epochs 30 original
+parser.add_argument('--num_epoch', type=int, default=60)                                           # epochs 30 original
 parser.add_argument('--batch_size', type=int, default=50)                                           # batch size 50 original
 parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
 
