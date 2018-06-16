@@ -2,23 +2,23 @@
 
 # This is an example script of training and running model ensembles.
 # train 5 models with different seeds
-# python runner.py --seed 0 --id 00 --diagonal_positional_attention --save_epoch 10
-# python runner.py --seed 1 --id 01 --diagonal_positional_attention --save_epoch 10
-# python runner.py --seed 2 --id 02 --diagonal_positional_attention --save_epoch 10
-# python runner.py --seed 3 --id 03 --diagonal_positional_attention --save_epoch 10
-# python runner.py --seed 4 --id 04 --diagonal_positional_attention --save_epoch 10
+python runner.py --seed 1234 --id xx00 --save_epoch 20
+python runner.py --seed 1111 --id xx01 --save_epoch 20
+python runner.py --seed 2222 --id xx02 --save_epoch 20
+python runner.py --seed 3333 --id xx03 --save_epoch 20
+python runner.py --seed 4444 --id xx04 --save_epoch 20
 
 # evaluate on test sets and save prediction files
-python eval.py --model_dir saved_models/00 --out saved_models/out/test_0.pkl
-python eval.py --model_dir saved_models/01 --out saved_models/out/test_1.pkl
-python eval.py --model_dir saved_models/02 --out saved_models/out/test_2.pkl
-python eval.py --model_dir saved_models/03 --out saved_models/out/test_3.pkl
-python eval.py --model_dir saved_models/04 --out saved_models/out/test_4.pkl
+python eval.py --model_dir saved_models/xx00 --model checkpoint_epoch_60.pt --out saved_models/out/test_x0.pkl
+python eval.py --model_dir saved_models/xx01 --model checkpoint_epoch_60.pt --out saved_models/out/test_x1.pkl
+python eval.py --model_dir saved_models/xx02 --model checkpoint_epoch_60.pt --out saved_models/out/test_x2.pkl
+python eval.py --model_dir saved_models/xx03 --model checkpoint_epoch_60.pt --out saved_models/out/test_x3.pkl
+python eval.py --model_dir saved_models/xx04 --model checkpoint_epoch_60.pt --out saved_models/out/test_x4.pkl
 
 # run ensemble
 ARGS=""
 # for id in 1 2 3 4 5; do
-for id in 1 2 3 4 5; do
+for id in x0 x1 x2 x3 x4; do
     OUT="saved_models/out/test_${id}.pkl"
     ARGS="$ARGS $OUT"
 done
