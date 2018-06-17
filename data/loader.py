@@ -237,6 +237,9 @@ class DataLoader(object):
         e.g. input=[-4,-3,-3,-2,-2,-1,-1,0,0,1,1,2,2,3,3,4] and window=3
               --> output=[-3,-2,-2,-2,-1,-1,-1,0,0,1,1,1,2,2,2,3]
 
+        # this was one of the other ideas we tried, but it is not used anywhere,
+        # instead we use the relative word positions function above.
+
         :param positions_list: list of word positions relative to the query or object
         :param width: width of the bin window
         :return: new positions

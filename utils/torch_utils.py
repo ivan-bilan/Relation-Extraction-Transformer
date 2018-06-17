@@ -205,8 +205,6 @@ class NAdam(Optimizer):
 class NoamOpt:
     "Optim wrapper that implements rate."
 
-    # TODO: this leads to errors
-
     def __init__(self, model_size, factor, warmup, optimizer):
         self.optimizer = optimizer
         self._step = 0

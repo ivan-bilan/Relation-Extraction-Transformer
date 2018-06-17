@@ -38,6 +38,9 @@ parser.add_argument('--cpu', action='store_true')
 
 args = parser.parse_args()
 
+with open('global_random_seed.py', 'w') as the_file:
+    the_file.write('RANDOM_SEED = '+str(args.seed))
+
 # set top level random seeds
 torch.manual_seed(args.seed)
 random.seed(args.seed)
