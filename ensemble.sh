@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # This is an example script of training and running model ensembles.
+
 # train 5 models with different seeds, due to unfixed bugs in
 # PyTorch some seeds result in a RuntimeError:
 """
@@ -8,7 +9,7 @@
     allow_unreachable=True)  # allow_unreachable flag
 RuntimeError: merge_sort: failed to synchronize: unspecified launch failure
 """
-# this happens when some gradients can't be properly backpropagated,
+# this happens when some gradients can't be properly back-propagated,
 # and this problem should be fixed in 0.5 version.
 # That is why we skip seed 33, and use 66 instead.
 python runner.py --seed 11 --id xx00 --save_epoch 20

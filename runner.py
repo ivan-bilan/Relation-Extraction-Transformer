@@ -42,16 +42,16 @@ parser.add_argument('--vocab_dir', type=str, default='dataset/vocab')
 parser.add_argument('--emb_dim', type=int, default=300, help='Word embedding dimension.')
 parser.add_argument('--ner_dim', type=int, default=30, help='NER embedding dimension.')
 parser.add_argument('--pos_dim', type=int, default=30, help='POS embedding dimension.')
-parser.add_argument('--hidden_dim', type=int, default=360, help='RNN hidden state size.')              # 200 original
+parser.add_argument('--hidden_dim', type=int, default=360, help='RNN hidden state size.')       # 200 original
 parser.add_argument('--hidden_self', type=int, default=130,
-                    help='Hidden size for self-attention.')  # n_model*2 in the paper  # used to be 720
+                    help='Hidden size for self-attention.')         # n_model*2 in the paper  # used to be 720
 parser.add_argument('--query_size_attn', type=int, default=360,
                     help='Embedding for query size in the positional attention.')  # n_model*2 in the paper
 parser.add_argument('--num_layers', type=int, default=2, help='Num of lstm layers.')
 
 # encoder layers
-parser.add_argument('--num_layers_encoder', type=int, default=1, help='Num of self-attention encoders.')  # 2
-parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn dropout rate.')            # 0.5 original
+parser.add_argument('--num_layers_encoder', type=int, default=1, help='Num of self-attention encoders.')
+parser.add_argument('--dropout', type=float, default=0.4, help='Input and attn dropout rate.')            # 0.1 original
 parser.add_argument('--scaled_dropout', type=float, default=0.1, help='Input and scaled dropout rate.')   # 0.1 original
 parser.add_argument('--temper_value', type=float, default=0.5, help='Temper value for Scaled Attention.') # 0.5 original
 
@@ -142,12 +142,12 @@ parser.add_argument('--attn_dim', type=int, default=200, help='Attention size.')
 parser.add_argument('--pe_dim', type=int, default=30, help='Position encoding dimension.')
 
 parser.add_argument('--lr', type=float, default=0.1, help='Applies to SGD and Adagrad.')            # lr 1.0 orig
-parser.add_argument('--lr_decay', type=float, default=0.9)                  # lr_decay 0.9 original
+parser.add_argument('--lr_decay', type=float, default=0.9)
 parser.add_argument('--decay_epoch', type=int, default=15, help='Start LR decay from this epoch.')
 
-parser.add_argument('--optim', type=str, default='sgd', help='sgd, asgd, adagrad, adam, nadam or adamax.')    # sgd original
-parser.add_argument('--num_epoch', type=int, default=60)                                           # epochs 30 original
-parser.add_argument('--batch_size', type=int, default=50)                                           # batch size 50 original
+parser.add_argument('--optim', type=str, default='sgd', help='sgd, asgd, adagrad, adam, nadam or adamax.')
+parser.add_argument('--num_epoch', type=int, default=60)
+parser.add_argument('--batch_size', type=int, default=50)
 parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
 
 # info for model saving
@@ -177,7 +177,7 @@ with open('global_random_seed.py', 'w') as the_file:
     the_file.write('RANDOM_SEED = '+str(args.seed))
 
 
-# improves speed of cuda, is set to False by default due to high memory usage
+# improves speed of cuda, these are set to False by default due to high memory usage
 torch.backends.cudnn.fastest = True
 torch.backends.cudnn.benchmark = True
 # torch.set_num_threads(8)   # TODO: this doesn't seem to do anything

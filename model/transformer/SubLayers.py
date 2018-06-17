@@ -201,11 +201,10 @@ class MultiHeadAttention(nn.Module):
 class PositionwiseFeedForward(nn.Module):
     ''' A two-feed-forward-layer module '''
 
-    def __init__(self, d_hid, d_inner_hid, dropout=0.1):
+    def __init__(self, d_hid, d_inner_hid, dropout=0.1, use_batch_norm=True):
         super(PositionwiseFeedForward, self).__init__()
 
-        # TODO: this has to come from hyperparameters
-        self.use_batch_norm = True
+        self.use_batch_norm = use_batch_norm
 
         self.w_1 = nn.Conv1d(d_hid, d_inner_hid, 1)  # position-wise
         self.w_2 = nn.Conv1d(d_inner_hid, d_hid, 1)  # position-wise
