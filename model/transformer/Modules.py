@@ -201,6 +201,15 @@ class ScaledDotProductAttention(nn.Module):
 
             # left bottom to right top
             # dim=-1
+            # TODO: Ausgabe mean position/variance der scores
+            # 1. rausfinden, welche axis wörter, welche axis sind die positionen
+            # 2. für jedes über die positionen axis softmax (wird nur für zusätzliche Analyse verwendet)
+            # 3. Pro Wort: w = softmax(attention_scores), r = alle positions = "np.arange(len(w))"
+            # 4. mean =  weighted_average = np.average(r, weights=w)
+            # 5. std_dev = https://stackoverflow.com/questions/2413522/weighted-standard-deviation-in-numpy
+            # 6. Verteilung pro Satz ausgeben, für folgende Wörter (und erste 20 Sätze):
+            #   - größtes/kleinstes mean
+            #   - größte/kleinste std_dev
             attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
 
             # print(attn_pos.size())
