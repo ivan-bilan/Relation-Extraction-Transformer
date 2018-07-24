@@ -62,12 +62,13 @@ python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --self_att_a
 
 To train the LSTM only baseline mode, use:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_self_att --no-attn --id 01 --info "combined model"
+python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_self_att --no-attn --id 01 --info "baseline model"
 ```
 
 To use absolute positional encodings in self-attention instead of relative ones, use:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_diagonal_positional_attention --no-attn --id 01 --info "combined model"
+python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_diagonal_positional_attention --id 01 
+--info "no relative pos encodings"
 ```
 
 
