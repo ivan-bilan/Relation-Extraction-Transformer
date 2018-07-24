@@ -43,10 +43,12 @@ script included in the dataset.
 
 Train our final model with:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --id 00 --info "Position-aware attention model"
+python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --id 00 
+--info "Position-aware attention model with self-attention encoder"
 ```
 
-Use `--topn N` to finetune the top N word vectors only. The script will do the preprocessing automatically (word dropout, entity masking, etc.).
+Use `--topn N` to finetune the top N word vectors only. The script will do the preprocessing automatically 
+(word dropout, entity masking, etc.).
 
 To Train an LSTM baseline model use:
 ```
@@ -62,7 +64,8 @@ Run evaluation on the test set with:
 python eval.py saved_models/00 --dataset test
 ```
 
-This will use the `best_model.pt` by default. Use `--model checkpoint_epoch_10.pt` to specify a model checkpoint file. Add `--out saved_models/out/test1.pkl` to write model probability output to files (for ensemble, etc.).
+This will use the `best_model.pt` by default. Use `--model checkpoint_epoch_10.pt` to specify a model 
+checkpoint file. Add `--out saved_models/out/test1.pkl` to write model probability output to files (for ensemble, etc.).
 
 ## Ensemble
 
