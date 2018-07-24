@@ -43,7 +43,7 @@ script included in the dataset.
 
 Train our final model with:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --id 00 
+python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --id 00 
 --info "Position-aware attention model with self-attention encoder"
 ```
 
@@ -52,22 +52,22 @@ Use `--topn N` to finetune the top N word vectors only. The script will do the p
 
 To train a self-attention encoder model only use:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no-attn --id 01 --info "self-attention model"
+python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no-attn --id 01 --info "self-attention model"
 ```
 
 To combine a self-attention encoder model, LSTM and position-aware layer use:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --self_att_and_rnn --id 01 --info "combined model"
+python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --self_att_and_rnn --id 01 --info "combined model"
 ```
 
 To train the LSTM only baseline mode, use:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_self_att --no-attn --id 01 --info "baseline model"
+python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_self_att --no-attn --id 01 --info "baseline model"
 ```
 
 To use absolute positional encodings in self-attention instead of relative ones, use:
 ```
-python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_diagonal_positional_attention --id 01 
+python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_diagonal_positional_attention --id 01 
 --info "no relative pos encodings"
 ```
 
