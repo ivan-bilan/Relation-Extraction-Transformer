@@ -1,7 +1,7 @@
 Self-Attention for Relation Extraction
 =========================
 
-"Augmenting attention mechanisms for Relation Extraction."
+"Relation extraction using deep neural networks and self-attention"
 
 ```
 The Center for Information and Language Processing (CIS)
@@ -12,7 +12,9 @@ Ivan Bilan
 ## Requirements
 
 - Python 3.6.2
-- PyTorch 0.3
+- PyTorch 0.4
+- CUDA 9.1
+- CuDNN 7.005
 
 ## Preparation
 
@@ -28,16 +30,25 @@ python prepare_vocab.py dataset/tacred dataset/vocab --glove_dir dataset/glove
 
 This will write vocabulary and word vectors as a numpy matrix into the dir `dataset/vocab`.
 
+## Dataset
+
+The TACRED dataset used for evaluation is currently not publicly available. Follow the original authors' GitHub page
+for more updates: https://github.com/yuhaozhang/tacred-relation. On this page a sample dataset is available at:
+https://github.com/yuhaozhang/tacred-relation/tree/master/dataset/tacred
+
+For this implementation, we use the JSON format of the dataset which can be generated with the JSON generations
+script included in the dataset.
+
 ## Training
 
-Train a position-aware attention RNN model with:
+Train our final model with:
 ```
 python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --id 00 --info "Position-aware attention model"
 ```
 
 Use `--topn N` to finetune the top N word vectors only. The script will do the preprocessing automatically (word dropout, entity masking, etc.).
 
-Train an LSTM model with:
+To Train an LSTM baseline model use:
 ```
 python train.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no-attn --id 01 --info "LSTM model"
 ```
@@ -55,4 +66,17 @@ This will use the `best_model.pt` by default. Use `--model checkpoint_epoch_10.p
 
 ## Ensemble
 
-Please see the example script `ensemble.sh`.
+In order to run the ensembled model use: 
+ ```
+ bash ensemble.sh
+ ```
+ 
+ ## Limitations 
+ 
+ Currently there is problem with running the model on certain hardware/software constellation due to 
+ the beta state of the PyTorch. I was tested and works properly with CUDA 9.1 and CuDNN 7.005. If there are
+ any issues try running the model without the relative positional embeddings by including the flag 
+ `--no_diagonal_positional_attention`. Also follow the GitHub page of the project for regular updated when the
+ open source release is available at https://github.com/ivan-bilan.
+ 
+ 
