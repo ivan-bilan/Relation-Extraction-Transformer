@@ -43,9 +43,12 @@ class PositionalEncoding(nn.Module):
 
         # Compute the positional encodings once in log space.
         pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) *
-                             -(math.log(10000.0) / d_model))
+        position = torch.arange(0, max_len, dtype=torch.float64).unsqueeze(1)
+
+        # TODO: what type is this in the 0.4 version?????????????
+        arange_tensor = torch.arange(0, d_model, 2, dtype=torch.float64) * -(math.log(10000.0) / d_model)
+        # print(arange_tensor)
+        div_term = torch.exp(arange_tensor)
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
@@ -112,6 +115,7 @@ def get_attn_padding_mask(seq_q, seq_k):
     mb_size, len_q = seq_q.size()
     mb_size, len_k = seq_k.size()
     # print(seq_k)
+    print(seq_k.size())
     pad_attn_mask = seq_k.data.eq(PAD).unsqueeze(1)    # b x 1 x sk
     pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
     # print(pad_attn_mask)

@@ -120,6 +120,12 @@ class ScaledDotProductAttention(nn.Module):
             if verbose_sizes:
                 print(attn_pos.size())   # [150, 86, 86]
 
+            def batch_stripe_2(a):
+                b, i, j = a.size()
+                assert i >= j
+                b_s, k, l = a.stride()
+                return torch.as_strided(a, (b, i - j + 1, j), (b_s, k, k + l))
+
             def batch_stripe(a):
                 """
                 Get a diagonal stripe of a matrix m x n, where n > m
@@ -170,7 +176,7 @@ class ScaledDotProductAttention(nn.Module):
                     # there will be some broadcast magic going on
                 return tuple(args)
 
-            def flip(tensor, dims):
+            def flip_d(tensor, dims):
                 """
                 This function should be in native PyTorch hopefully after 0.4
                 :param tensor:
@@ -210,7 +216,17 @@ class ScaledDotProductAttention(nn.Module):
             # 6. Verteilung pro Satz ausgeben, für folgende Wörter (und erste 20 Sätze):
             #   - größtes/kleinstes mean
             #   - größte/kleinste std_dev
-            attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
+
+            # print(attn_pos.transpose(1, 2))
+
+            # import os
+            # os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
+
+            pre_processed = attn_pos.transpose(1, 2)
+            do_flip = torch.flip(pre_processed, [2])
+            # print(do_flip)
+            attn_pos = batch_stripe(do_flip)
+            print(attn_pos)
 
             # print(attn_pos.size())
 
