@@ -9,6 +9,8 @@ Ludwig Maximilian University of Munich
 Ivan Bilan
 ```
 
+https://arxiv.org/abs/1807.03052
+
 ## Requirements
 
 - Python 3.6.2
@@ -47,7 +49,7 @@ python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --id 00
 --info "Position-aware attention model with self-attention encoder"
 ```
 
-Use `--topn N` to finetune the top N word vectors only. The script will do the preprocessing automatically 
+Use `--topn N` to fine-tune the top N word vectors only. The script will do the preprocessing automatically 
 (word dropout, entity masking, etc.).
 
 To train a self-attention encoder model only use:
@@ -79,11 +81,15 @@ Model checkpoints and logs will be saved to `./saved_models/00`.
 
 Run evaluation on the test set with:
 ```
-python eval.py saved_models/00 --dataset test
+python eval.py --model_dir saved_models/00
 ```
 
 This will use the `best_model.pt` by default. Use `--model checkpoint_epoch_10.pt` to specify a model 
 checkpoint file. Add `--out saved_models/out/test1.pkl` to write model probability output to files (for ensemble, etc.).
+In our evaluation runs, we always evaluate the last epoch checkpoint, namely `--model checkpoint_epoch_60.pt` using:
+```
+python eval.py --model_dir saved_models/00 --model checkpoint_epoch_60.pt
+```
 
 ## Ensemble
 
@@ -95,7 +101,7 @@ In order to run the ensembled model use:
  ## Limitations 
  
  Currently there is problem with running the model on certain hardware/software constellation due to 
- the beta state of the PyTorch. I was tested and works properly with CUDA 9.1 and CuDNN 7.005. If there are
+ the beta state of PyTorch. It was tested and works properly with CUDA 9.1 and CuDNN 7.005. If there are
  any issues try running the model without the relative positional embeddings by including the flag 
  `--no_diagonal_positional_attention`. Also follow the GitHub page of the project for regular updated when the
  open source release is available at https://github.com/ivan-bilan.
