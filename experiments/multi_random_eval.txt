@@ -1,7 +1,6 @@
-# one of them didnt work, id 4?
+# folder ids and random seeds used for the runs
 # python runner.py --seed 2342234 --id aaa1  --save_epoch 10  --diagonal_positional_attention
 # python runner.py --seed 2365757 --id aaa2 --save_epoch 10  --diagonal_positional_attention
-# python runner.py --seed 5675677 --id aaa3  --save_epoch 10  --diagonal_positional_attention
 # python runner.py --seed 5756775 --id aaa4  --save_epoch 10  --diagonal_positional_attention
 # python runner.py --seed 7568888 --id aaa5  --save_epoch 10  --diagonal_positional_attention
 # python runner.py --seed 5464456 --id aaa6  --save_epoch 10  --diagonal_positional_attention
@@ -9,9 +8,9 @@
 # python runner.py --seed 1111 --id aaa8  --save_epoch 10  --diagonal_positional_attention
 # python runner.py --seed 2222 --id aaa9  --save_epoch 10  --diagonal_positional_attention
 # python runner.py --seed 3333 --id aaa10  --save_epoch 10  --diagonal_positional_attention
-python runner.py --seed 1 --id aaa11  --save_epoch 10  --diagonal_positional_attention
+# python runner.py --seed 1 --id aaa11  --save_epoch 10  --diagonal_positional_attention
 
-aaa1
+Folder id: aaa1
 
 Precision (micro): 62.719%
    Recall (micro): 68.812%
