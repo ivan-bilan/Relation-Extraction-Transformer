@@ -4,7 +4,7 @@ import torch.nn.init as init
 import numpy as np
 
 from global_random_seed import RANDOM_SEED
-# make everything reproducable
+# make everything reproducible
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 torch.backends.cudnn.deterministic = True
@@ -12,85 +12,14 @@ torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
 
 
-class Linear(nn.Module):
-    ''' Simple Linear layer with xavier init '''
-    def __init__(self, d_in, d_out, bias=True):
-        super(Linear, self).__init__()
-        self.linear = nn.Linear(d_in, d_out, bias=bias)
-        nn.init.xavier_normal_(self.linear.weight)
-
-    def forward(self, x):
-        return self.linear(x)
-
-
-class Bottle(nn.Module):
-    ''' Perform the reshape routine before and after an operation '''
-
-    def forward(self, input):
-        if len(input.size()) <= 2:
-            return super(Bottle, self).forward(input)
-
-        size = input.size()[:2]
-        out = super(Bottle, self).forward(input.view(size[0]*size[1], -1))
-        return out.view(size[0], size[1], -1)
-
-
-class BottleLinear(Bottle, Linear):
-    ''' Perform the reshape routine before and after a linear projection '''
-    pass
-
-
-class BottleSoftmax(Bottle, nn.Softmax):
-    ''' Perform the reshape routine before and after a softmax operation'''
-    pass
-
-
-class LayerNormalization(nn.Module):
-    ''' Layer normalization module '''
-
-    def __init__(self, d_hid, eps=1e-3):
-        super().__init__()
-
-        self.eps = eps
-        self.a_2 = nn.Parameter(torch.ones(d_hid), requires_grad=True)
-        self.b_2 = nn.Parameter(torch.zeros(d_hid), requires_grad=True)
-
-    def forward(self, z):
-        if z.size(1) == 1:
-            return z
-
-        mu = torch.mean(z, keepdim=True, dim=-1)
-        sigma = torch.std(z, keepdim=True, dim=-1)
-        ln_out = (z - mu.expand_as(z)) / (sigma.expand_as(z) + self.eps)
-        ln_out = ln_out * self.a_2.expand_as(ln_out) + self.b_2.expand_as(ln_out)
-
-        return ln_out
-
-
-class BatchBottle(nn.Module):
-    ''' Perform the reshape routine before and after an operation '''
-
-    def forward(self, input):
-        if len(input.size()) <= 2:
-            return super(BatchBottle, self).forward(input)
-        size = input.size()[1:]
-        out = super(BatchBottle, self).forward(input.view(-1, size[0]*size[1]))
-        return out.view(-1, size[0], size[1])
-
-
-class BottleLayerNormalization(BatchBottle, LayerNormalization):
-    ''' Perform the reshape routine before and after a layer normalization'''
-    pass
-
-
 class ScaledDotProductAttention(nn.Module):
     ''' Scaled Dot-Product Attention '''
 
-    def __init__(self, d_model, attn_dropout=0.1, temper_value=0.5):
+    def __init__(self, d_k, attn_dropout=0.1, temper_value=0.5):
         super().__init__()
 
         # add temper as hyperparameter
-        self.temper = np.power(d_model, temper_value)    # 0.5 originally
+        self.temper = np.power(d_k, temper_value)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = nn.Softmax(dim=2)
 
@@ -147,9 +76,6 @@ class ScaledDotProductAttention(nn.Module):
             do_flip = torch.flip(pre_processed, [2])
             # print(do_flip)
             attn_pos = batch_stripe(do_flip)
-            # print(attn_pos)
-
-            # print(attn_pos.size())
 
             if verbose_sizes:
                 print(attn_pos.size())
@@ -158,15 +84,8 @@ class ScaledDotProductAttention(nn.Module):
 
             attn = attn + attn_pos.transpose(1, 2)
 
-            # print(attn.size())
-
         if attn_mask is not None:
-            # print(attn_mask)
-            # print(attn_mask.size(), attn.size())
-
             attn = attn.masked_fill(attn_mask, -np.inf)
-
-        # print(attn.size())
 
         attn = self.softmax(attn)
         attn = self.dropout(attn)

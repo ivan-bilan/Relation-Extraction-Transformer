@@ -5,9 +5,9 @@ import copy
 import torch
 import torch.nn as nn
 import numpy as np
-from .Constants import *
 from torch.autograd import Variable
 from .Layers import EncoderLayer
+from .Constants import *
 
 from global_random_seed import RANDOM_SEED
 
@@ -43,7 +43,7 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float64).unsqueeze(1)
 
-        # TODO: what type is this in the 0.4 version?????????????
+        # TODO: what type is this in the 0.4 version?
         arange_tensor = torch.arange(0, d_model, 2, dtype=torch.float64) * -(math.log(10000.0) / d_model)
         # print(arange_tensor)
         div_term = torch.exp(arange_tensor)
@@ -80,62 +80,35 @@ class PositionalEncodingLookup(nn.Module):
         return x
 
 
-def position_encoding_init(n_position, d_pos_vec):
-    """
-    Init the sinusoid position encoding table
+def position_encoding_init(n_position, d_hid, padding_idx=None):
+    ''' Sinusoid position encoding table '''
 
-    :param n_position:
-    :param d_pos_vec:
-    :return:
-    """
-    
-    # keep dim 0 for padding token position encoding zero vector
-    position_enc = np.array([
-        [pos / np.power(10000, 2 * (j // 2) / d_pos_vec) for j in range(d_pos_vec)]
-        if pos != 0 else np.zeros(d_pos_vec) for pos in range(n_position)])
+    def cal_angle(hid_idx, position):
+        return position / np.power(10000, 2 * (hid_idx // 2) / d_hid)
 
-    position_enc[1:, 0::2] = np.sin(position_enc[1:, 0::2])  # dim 2i
-    position_enc[1:, 1::2] = np.cos(position_enc[1:, 1::2])  # dim 2i+1
+    def get_posi_angle_vec(position, d_hid):
+        return [cal_angle(hid_j, position) for hid_j in range(d_hid)]
 
-    return torch.FloatTensor(position_enc)
+    sinusoid_table = np.array([get_posi_angle_vec(pos_i, d_hid) for pos_i in range(n_position)])
+
+    sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
+    sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
+
+    if padding_idx is not None:
+        # zero vector for padding dimension
+        sinusoid_table[padding_idx] = 0.
+
+    return torch.FloatTensor(sinusoid_table)
 
 
 def get_attn_padding_mask(seq_q, seq_k):
-    """
-    Indicate the padding-related part to mask
-    :param seq_q: 
-    :param seq_k: 
-    :return:
-    """
+    ''' For masking out the padding part. '''
 
-    assert seq_q.dim() == 2 and seq_k.dim() == 2
+    len_q = seq_q.size(1)
+    padding_mask = seq_k.eq(PAD)
+    padding_mask = padding_mask.unsqueeze(1).expand(-1, len_q, -1) # b x lq x lk
 
-    mb_size, len_q = seq_q.size()
-    mb_size, len_k = seq_k.size()
-    # print(seq_k)
-    # print(seq_k.size())
-    pad_attn_mask = seq_k.data.eq(PAD).unsqueeze(1)    # b x 1 x sk
-    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
-    # print(pad_attn_mask)
-    return pad_attn_mask
-
-
-def get_attn_subsequent_mask(seq):
-    """
-    Get an attention mask to avoid using the subsequent info.
-    :param seq:
-    :return:
-    """
-    assert seq.dim() == 2
-
-    attn_shape = (seq.size(0), seq.size(1), seq.size(1))
-    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-    subsequent_mask = torch.from_numpy(subsequent_mask)
-
-    if seq.is_cuda:
-        subsequent_mask = subsequent_mask.to("cuda")
-
-    return subsequent_mask
+    return padding_mask
 
 
 class Encoder(nn.Module):
@@ -166,45 +139,47 @@ class Encoder(nn.Module):
         # make sure all dimensions are correct, based on the paper
         assert d_word_vec == d_model
 
-        self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-        self.position_enc.weight = nn.Parameter(
-            position_encoding_init(n_position, d_word_vec),
-            requires_grad=False
-        )
+        # generate sinusoids and freeze them
+        self.position_enc = nn.Embedding.from_pretrained(
+            position_encoding_init(n_position, d_word_vec, padding_idx=PAD),
+            freeze=True)
 
         if obj_sub_pos and not self.diagonal_positional_attention:
-            # TODO: do we need to learn separate encodings here???
+
+            # embeddings for object pos encodings
+            # TODO: do we need to learn separate encodings here?
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+            self.position_enc2.weight.requires_grad = True
+            # don't need the sinusoids here?
+            # self.position_enc2.weight = nn.Parameter(n_position, d_word_vec, requires_grad=True)
 
-            self.position_enc2.weight = nn.Parameter(
-                position_encoding_init(n_position, d_word_vec),
-                requires_grad=False
-            )
-
+            """
+            # embeddings for subject pos encodings
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             self.position_enc3.weight = nn.Parameter(
                 position_encoding_init(n_position, d_word_vec),
                 requires_grad=False
             )
+            
+            # this is experimental
             self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
+            """
 
         elif self.diagonal_positional_attention:
             # needs a positional matrix double the size of embeddings
 
-            # other
+            # what is this?
             # self.position_dpa = nn.Parameter(torch.FloatTensor((n_position*2)-1, d_word_vec//n_head).cuda())
             # position_encoding_init((n_position*2)-1, d_word_vec//n_head)
 
+            # embeddings for object pos encodings
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-
-            # TODO: is it better to learn new encodings here?
-            self.position_enc2.weight = nn.Parameter(
-                position_encoding_init(n_position, d_word_vec),
-                requires_grad=False
-            )
-
             self.position_enc2.weight.requires_grad = True
+            # don't need the sinusoids here?
+            # self.position_enc2.weight = nn.Parameter(n_position, d_word_vec, requires_grad=True)
 
+            """
+            # embeddings for subject pos encodings
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             # TODO: is it better to learn new encodings here?
             self.position_enc3.weight = nn.Parameter(
@@ -212,16 +187,17 @@ class Encoder(nn.Module):
                 requires_grad=False
             )
             # self.position_enc3.weight.requires_grad = True
+            """
 
             # TODO: try n_pos, n_pos*2-1
-            self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
-
-            # TODO: investigate if we need pos encoding here as well
-            # self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
-            # init.kaiming_normal_(self.position_dpa)
-
+            # self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
+            self.position_dpa = nn.Embedding((n_position * 2) - 1, d_word_vec, padding_idx=PAD)
             # make sure embeddings are trainable for dpa
             self.position_dpa.weight.requires_grad = True
+
+            # TODO: do we need to set weights implicitly?
+            # self.position_dpa.weight.data = position_encoding_init((n_position*2)-1, d_word_vec//n_head)
+            # init.kaiming_normal_(self.position_dpa)
 
             # print(self.position_dpa)
             # self.position_dpa2 = PositionalEncodingLookup(d_word_vec//n_head, (n_position*2)-1)
@@ -275,7 +251,7 @@ class Encoder(nn.Module):
 
             if self.relative_positions:
                 # add object positions only
-                src_seq = src_seq + self.position_enc2(pe_features[1]) # + self.position_enc3(pe_features[0])
+                src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
             else:
                 # TODO
                 # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions

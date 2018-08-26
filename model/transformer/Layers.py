@@ -39,7 +39,7 @@ class EncoderLayer(nn.Module):
             d_model, d_inner_hid, dropout=dropout, use_batch_norm=use_batch_norm
         )
 
-    def forward(self, enc_input, slf_attn_mask=None, position_dpa=None):  # enc_non_embedded, enc_input, enc_pos,
+    def forward(self, enc_input, slf_attn_mask=None, position_dpa=None):
 
         # here q, k, w are all the same at input
         enc_output, enc_slf_attn = self.slf_attn(

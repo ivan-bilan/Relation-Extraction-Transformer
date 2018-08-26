@@ -1,10 +1,9 @@
 ''' Define the sublayers in encoder/decoder layer '''
 
+import numpy as np
 import torch
 import torch.nn as nn
-from .Modules import BottleLinear as Linear
 from .Modules import ScaledDotProductAttention
-from .Modules import LayerNormalization
 
 from global_random_seed import RANDOM_SEED
 torch.manual_seed(RANDOM_SEED)
@@ -35,9 +34,15 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Linear(d_model, n_head * d_v)
 
         # TODO: try # , nonlinearity='relu'
-        nn.init.kaiming_normal_(self.w_qs.weight)  # xavier_normal used originally
-        nn.init.kaiming_normal_(self.w_ks.weight)  # xavier_normal
-        nn.init.kaiming_normal_(self.w_vs.weight)  # xavier_normal
+        # nn.init.kaiming_normal_(self.w_qs.weight)  # xavier_normal used originally
+        # nn.init.kaiming_normal_(self.w_ks.weight)  # xavier_normal
+        # nn.init.kaiming_normal_(self.w_vs.weight)  # xavier_normal
+
+        # new weight initialization as per:
+        # https://github.com/jadore801120/attention-is-all-you-need-pytorch/commit/2077515a8ab24f4abdda9089c502fa14f32fc5d9
+        nn.init.normal_(self.w_qs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
+        nn.init.normal_(self.w_ks.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
+        nn.init.normal_(self.w_vs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_v)))
 
         # for relative positional encodings
         # self.pos_dpa = nn.Linear(d_model, n_head * d_k)
@@ -51,19 +56,17 @@ class MultiHeadAttention(nn.Module):
 
         # TODO: test this, initially dropout was always set to 0.1!
         # TODO: higher makes the model stable, but Recall is now much lower!
-        self.attention = ScaledDotProductAttention(d_model, scaled_dropout, temper_value)
+        self.attention = ScaledDotProductAttention(d_k, scaled_dropout, temper_value)
 
         if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)
             # self.layer_norm = nn.GroupNorm(d_model, 42)
         else:  # layer norm
-            # pytorch 0.3.1
-            # self.layer_norm = LayerNormalization(d_model)
-            # pytorch 0.4
             self.layer_norm = nn.LayerNorm(d_model)
 
         # TODO: try with , bias=False
-        self.fc = Linear(n_head * d_v, d_model)
+        self.fc = nn.Linear(n_head * d_v, d_model)
+        nn.init.xavier_normal_(self.fc.weight)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, q, k, v, attn_mask=None, position_dpa_vector=None):
@@ -87,10 +90,11 @@ class MultiHeadAttention(nn.Module):
         k = k.permute(2, 0, 1, 3).contiguous().view(-1, len_k, d_k)  # (n*b) x lk x dk
         v = v.permute(2, 0, 1, 3).contiguous().view(-1, len_v, d_v)  # (n*b) x lv x dv
 
+        # do the same as above but for the relative positional embeddings
         if position_dpa_vector is not None:
             sz_b1, len_q1, d_model = position_dpa_vector.size()
-            position_dpa_vector = position_dpa_vector.view(sz_b, len_q1 * 2, n_head, d_k)
-            position_dpa_vector = position_dpa_vector.permute(2, 0, 1, 3).contiguous().view(-1, len_q1 * 2, d_k)
+            position_dpa_vector = position_dpa_vector.view(sz_b1, len_q1, n_head, d_k)
+            position_dpa_vector = position_dpa_vector.permute(2, 0, 1, 3).contiguous().view(-1, len_q1, d_k)
 
             # position_dpa = position_dpa.repeat(n_head, 1, 1)
             # position_dpa = position_dpa.view(n_head, -1, d_model//n_head)
@@ -156,17 +160,12 @@ class PositionwiseFeedForward(nn.Module):
 
             # other options here
             # self.layer_norm = nn.GroupNorm(d_hid, d_hid)
-            # nn.BatchNorm1d(d_hid)
         else:
-            # use the initially provided layer norm
-            # self.layer_norm = LayerNormalization(d_hid)
-
-            # use LayerNorm form PyTorch 0.4
             self.layer_norm = nn.LayerNorm(d_hid)
 
         self.dropout = nn.Dropout(dropout)
 
-        # instead of relu also tried: ELU,LeakyReLU, PReLU,ReLU6,RReLU,SELU
+        # instead of relu also tried: ELU, LeakyReLU, PReLU, ReLU6, RReLU, SELU
         self.relu = nn.RReLU()  # nn.ReLU() used originally
 
     def forward(self, x, residual=None):
@@ -175,16 +174,18 @@ class PositionwiseFeedForward(nn.Module):
         if residual is None:
             residual = x
 
-        w1_output = self.relu(self.w_1(x.transpose(1, 2)))
-        output = self.w_2(w1_output).transpose(2, 1)
+        output = x.transpose(1, 2)
+        output = self.w_2(self.relu(self.w_1(output)))
+        output = output.transpose(1, 2)
         output = self.dropout(output)
 
         if self.use_batch_norm:
             # batch_norm expects (batch_size, h_units, seq_len), we have (batch_s, seq_len, h_units)
             outputs = output.permute(0, 2, 1)
             residual_permuted = residual.permute(0, 2, 1)
+
             # have to make everything contiguous to make it run on CUDA
-            outputs = self.layer_norm(outputs.contiguous()+residual_permuted.contiguous())
+            outputs = self.layer_norm(outputs.contiguous() + residual_permuted.contiguous())
             # move columns back
             return outputs.permute(0, 2, 1)
         else:
