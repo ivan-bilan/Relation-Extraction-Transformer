@@ -139,7 +139,7 @@ class Encoder(nn.Module):
         # make sure all dimensions are correct, based on the paper
         assert d_word_vec == d_model
 
-        # generate sinusoids and freeze them
+        # generate sinusoids and freeze them as embeddings
         self.position_enc = nn.Embedding.from_pretrained(
             position_encoding_init(n_position, d_word_vec, padding_idx=PAD),
             freeze=True)
@@ -153,17 +153,9 @@ class Encoder(nn.Module):
             # don't need the sinusoids here?
             # self.position_enc2.weight = nn.Parameter(n_position, d_word_vec, requires_grad=True)
 
-            """
-            # embeddings for subject pos encodings
+            # embedding for subject pos encodings
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            self.position_enc3.weight = nn.Parameter(
-                position_encoding_init(n_position, d_word_vec),
-                requires_grad=False
-            )
-            
-            # this is experimental
-            self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
-            """
+            self.position_enc3.weight.requires_grad = True
 
         elif self.diagonal_positional_attention:
             # needs a positional matrix double the size of embeddings
@@ -178,16 +170,9 @@ class Encoder(nn.Module):
             # don't need the sinusoids here?
             # self.position_enc2.weight = nn.Parameter(n_position, d_word_vec, requires_grad=True)
 
-            """
-            # embeddings for subject pos encodings
+            # embedding for subject pos encodings
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            # TODO: is it better to learn new encodings here?
-            self.position_enc3.weight = nn.Parameter(
-                position_encoding_init(n_position, d_word_vec),
-                requires_grad=False
-            )
-            # self.position_enc3.weight.requires_grad = True
-            """
+            self.position_enc3.weight.requires_grad = True
 
             # TODO: try n_pos, n_pos*2-1
             # self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
@@ -253,19 +238,18 @@ class Encoder(nn.Module):
                 # add object positions only
                 src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
             else:
-                # TODO
-                # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
+                # TODO: this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
                 src_seq += self.position_enc(src_pos)  # src_pos
-
-            # new
-            # print(pe_features[1])
-            # src_seq = self.positions_enc4.forward(src_seq) # self.position_enc2(pe_features[1])  # src_seq +
 
         elif self.diagonal_positional_attention:
 
             # first add the obj/subj embeddings to the word embeddings
             # TODO: try all variants here!, also without any obj/subj encodings
 
+            # use only the object embeddings
+            # src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+
+            # use both object and subject encodings
             src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
 
             verbose_sizes = False

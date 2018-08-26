@@ -45,8 +45,8 @@ class MultiHeadAttention(nn.Module):
         nn.init.normal_(self.w_vs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_v)))
 
         # for relative positional encodings
-        # self.pos_dpa = nn.Linear(d_model, n_head * d_k)
-        # nn.init.kaiming_normal_(self.pos_dpa.weight)
+        self.pos_dpa = nn.Linear(d_model, n_head * d_k)
+        nn.init.kaiming_normal_(self.pos_dpa.weight)
 
         # self.position_dpa2 = nn.Parameter(torch.FloatTensor(n_head, (96 * 2) - 1, d_k).cuda())
 
@@ -93,12 +93,8 @@ class MultiHeadAttention(nn.Module):
         # do the same as above but for the relative positional embeddings
         if position_dpa_vector is not None:
             sz_b1, len_q1, d_model = position_dpa_vector.size()
-            position_dpa_vector = position_dpa_vector.view(sz_b1, len_q1, n_head, d_k)
+            position_dpa_vector = self.pos_dpa(position_dpa_vector).view(sz_b1, len_q1, n_head, d_k)
             position_dpa_vector = position_dpa_vector.permute(2, 0, 1, 3).contiguous().view(-1, len_q1, d_k)
-
-            # position_dpa = position_dpa.repeat(n_head, 1, 1)
-            # position_dpa = position_dpa.view(n_head, -1, d_model//n_head)
-            # position_dpa = position_dpa.view(-1, len_q * 2, d_k)
 
         if attn_mask is not None:
             if position_dpa_vector is not None:
