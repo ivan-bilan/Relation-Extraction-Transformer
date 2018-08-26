@@ -109,7 +109,7 @@ class MultiHeadAttention(nn.Module):
 
         # don't use masking if none given
         else:
-            outputs, attns = self.attention(q, k, v)
+            output, attns = self.attention(q, k, v)
 
         # back to original mb_size batch, result size = mb_size x len_q x (n_head*d_v)
         output = output.view(n_head, sz_b, len_q, d_v)
