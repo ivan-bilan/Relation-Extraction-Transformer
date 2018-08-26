@@ -2,10 +2,8 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.init as init
 from .Modules import BottleLinear as Linear
 from .Modules import ScaledDotProductAttention
-# from transformer.Modules import BottleLayerNormalization as LayerNormalization
 from .Modules import LayerNormalization
 
 from global_random_seed import RANDOM_SEED
@@ -22,7 +20,7 @@ class MultiHeadAttention(nn.Module):
                  use_batch_norm=True, residual_bool=False, temper_value=0.5
                  ):
 
-        super(MultiHeadAttention, self).__init__()
+        super().__init__()
 
         self.n_head = n_head
         self.d_k = d_k
@@ -32,9 +30,18 @@ class MultiHeadAttention(nn.Module):
         self.residual_bool = residual_bool
 
         # TODO: default without cuda, do we need cuda call here?
-        self.w_qs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).to("cuda"))
-        self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).to("cuda"))
-        self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).to("cuda"))
+        self.w_qs = nn.Linear(d_model, n_head * d_k)
+        self.w_ks = nn.Linear(d_model, n_head * d_k)
+        self.w_vs = nn.Linear(d_model, n_head * d_v)
+
+        # TODO: try # , nonlinearity='relu'
+        nn.init.kaiming_normal_(self.w_qs.weight)  # xavier_normal used originally
+        nn.init.kaiming_normal_(self.w_ks.weight)  # xavier_normal
+        nn.init.kaiming_normal_(self.w_vs.weight)  # xavier_normal
+
+        # for relative positional encodings
+        # self.pos_dpa = nn.Linear(d_model, n_head * d_k)
+        # nn.init.kaiming_normal_(self.pos_dpa.weight)
 
         # self.position_dpa2 = nn.Parameter(torch.FloatTensor(n_head, (96 * 2) - 1, d_k).cuda())
 
@@ -56,126 +63,61 @@ class MultiHeadAttention(nn.Module):
             self.layer_norm = nn.LayerNorm(d_model)
 
         # TODO: try with , bias=False
-        self.proj = Linear(n_head*d_v, d_model)  # , bias=False
+        self.fc = Linear(n_head * d_v, d_model)
         self.dropout = nn.Dropout(dropout)
 
-        # TODO: try # , nonlinearity='relu'
-        init.kaiming_normal_(self.w_qs)  # xavier_normal used originally
-        init.kaiming_normal_(self.w_ks)  # xavier_normal
-        init.kaiming_normal_(self.w_vs)  # xavier_normal
-
-        # dpa???
-        # init.kaiming_normal(self.position_dpa2)  # xavier_normal
-
-    def forward(self, q, k, v, attn_mask=None, position_dpa=None):
+    def forward(self, q, k, v, attn_mask=None, position_dpa_vector=None):
 
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
 
         residual = q
 
-        verbose_sizes = False
-
-        mb_size, len_q, d_model = q.size()
-        mb_size, len_k, d_model = k.size()
-        mb_size, len_v, d_model = v.size()
-
-        if position_dpa is not None and verbose_sizes:
-            print()
-            print("q before repeat:", q.size())
+        sz_b, len_q, d_model = q.size()
+        sz_b, len_k, d_model = k.size()
+        sz_b, len_v, d_model = v.size()
 
         # treat as a (n_head) size batch
-        q_s = q.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_q) x d_model
-        k_s = k.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_k) x d_model
-        v_s = v.repeat(n_head, 1, 1).view(n_head, -1, d_model)  # n_head x (mb_size*len_v) x d_model
-
-        if position_dpa is not None and verbose_sizes:
-            print("q_s after repeat:", q_s.size())
+        q = self.w_qs(q).view(sz_b, len_q, n_head, d_k)
+        k = self.w_ks(k).view(sz_b, len_k, n_head, d_k)
+        v = self.w_vs(v).view(sz_b, len_v, n_head, d_v)
 
         # treat the result as a (n_head * mb_size) size batch
-        q_s = torch.bmm(q_s, self.w_qs).view(-1, len_q, d_k)    # (n_head*mb_size) x len_q x d_k
-        k_s = torch.bmm(k_s, self.w_ks).view(-1, len_k, d_k)    # (n_head*mb_size) x len_k x d_k
-        v_s = torch.bmm(v_s, self.w_vs).view(-1, len_v, d_v)    # (n_head*mb_size) x len_v x d_v
+        q = q.permute(2, 0, 1, 3).contiguous().view(-1, len_q, d_k)  # (n*b) x lq x dk
+        k = k.permute(2, 0, 1, 3).contiguous().view(-1, len_k, d_k)  # (n*b) x lk x dk
+        v = v.permute(2, 0, 1, 3).contiguous().view(-1, len_v, d_v)  # (n*b) x lv x dv
 
-        if position_dpa is not None and verbose_sizes:
-            print("q_s after bmm:", q_s.size())
-            print()
+        if position_dpa_vector is not None:
+            sz_b1, len_q1, d_model = position_dpa_vector.size()
+            position_dpa_vector = position_dpa_vector.view(sz_b, len_q1 * 2, n_head, d_k)
+            position_dpa_vector = position_dpa_vector.permute(2, 0, 1, 3).contiguous().view(-1, len_q1 * 2, d_k)
 
-        # TODO: set the same size to dpa as to the seq_input size
-        if position_dpa is not None:
+            # position_dpa = position_dpa.repeat(n_head, 1, 1)
+            # position_dpa = position_dpa.view(n_head, -1, d_model//n_head)
+            # position_dpa = position_dpa.view(-1, len_q * 2, d_k)
 
-            verbose_sizes = False
-
-            if verbose_sizes:
-                print("dpa before repeat:", position_dpa.size())
-
-            # size before this: [50, 86, 360] or 720 if *2
-            # size after: [3, 4550, 360] or 720 if *2
-
-            position_dpa = position_dpa.repeat(n_head, 1, 1)
-
-            if verbose_sizes:
-                print("dpa after repeat:", position_dpa.size())
-
-            position_dpa = position_dpa.view(n_head, -1, d_model//n_head)
-
-            if verbose_sizes:
-                print("dpa after repeat 2 view:", position_dpa.size())
-
-            # TODO: this fails if we don't resize by multiplying
-            # self.dpa_qs is a matrix of ones filled out in init
-
-            # size after multiplying: [3, 4550, 120]             # n_head x (batch_size*len_q) x d_model
-            # size after view: [150, 86, 120]                    # (n_head*batch_size) x len_q x d_k
-
-            # position_dpa = torch.bmm(position_dpa, self.position_dpa2)  # n_head x (batch_size*len_q) x d_model
-            # if verbose_sizes:
-            #    print(position_dpa.size())
-
-            # do the last view
-            position_dpa = position_dpa.view(-1, len_q * 2, d_k)  # (n_head*batch_size) x len_q x d_k
-
-            if verbose_sizes:
-                print("dpa after last view:", position_dpa.size())
-
-            # this view doesn't work
-            # position_dpa = position_dpa.view(n_head, d_model, d_k).view(-1, len_q, d_k)
-
-            if verbose_sizes:
-                print("dpa after bmm:", position_dpa.size())    # [150, 86, 120]
-                print()
-
-        # perform attention, result size = (n_head * mb_size) x len_q x d_v
         if attn_mask is not None:
-
-            if position_dpa is not None:
-
-                # print("using diagonal positional encodings 1")
-
-                # TODO: the size of dpa changes before this! investigate!
-                # print("q_s before scaled_attn:", q_s.size())
-                # print("dpa before scaled_attn:", position_dpa.size())
-
-                outputs, attns = self.attention(
-                    q_s, k_s, v_s,
-                    attn_mask=attn_mask.repeat(n_head, 1, 1),
-                    position_dpa=position_dpa
+            if position_dpa_vector is not None:
+                attn_mask = attn_mask.repeat(n_head, 1, 1)  # (n*b) x .. x ..
+                output, attns = self.attention(q, k, v,
+                    attn_mask=attn_mask,
+                    position_dpa=position_dpa_vector
                 )
-
             else:
-                outputs, attns = self.attention(q_s, k_s, v_s, attn_mask=attn_mask.repeat(n_head, 1, 1))
+                attn_mask = attn_mask.repeat(n_head, 1, 1)  # (n*b) x .. x ..
+                output, attns = self.attention(q, k, v, attn_mask=attn_mask)
 
         # don't use masking if none given
         else:
-            outputs, attns = self.attention(q_s, k_s, v_s)
+            outputs, attns = self.attention(q, k, v)
 
         # back to original mb_size batch, result size = mb_size x len_q x (n_head*d_v)
-        outputs = torch.cat(torch.split(outputs, mb_size, dim=0), dim=-1)
+        output = output.view(n_head, sz_b, len_q, d_v)
+        output = output.permute(1, 2, 0, 3).contiguous().view(sz_b, len_q, -1)  # b x lq x (n*dv)
 
         # project back to residual size
         # TODO: some people suggest to use bias=False when projecting!
-        outputs = self.proj(outputs)
-        outputs = self.dropout(outputs)
+        outputs = self.dropout(self.fc(output))
 
         if self.use_batch_norm:  # use batch norm
             # batch_norm expects (batch_size, h_units, seq_len), we have (batch_s, seq_len, h_units)
@@ -202,7 +144,7 @@ class PositionwiseFeedForward(nn.Module):
     ''' A two-feed-forward-layer module '''
 
     def __init__(self, d_hid, d_inner_hid, dropout=0.1, use_batch_norm=True):
-        super(PositionwiseFeedForward, self).__init__()
+        super().__init__()
 
         self.use_batch_norm = use_batch_norm
 

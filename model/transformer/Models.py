@@ -3,12 +3,10 @@
 import math
 import copy
 import torch
-import torch.nn.init as init
 import torch.nn as nn
 import numpy as np
 from .Constants import *
 from torch.autograd import Variable
-from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer
 
 from global_random_seed import RANDOM_SEED
@@ -99,7 +97,7 @@ def position_encoding_init(n_position, d_pos_vec):
     position_enc[1:, 0::2] = np.sin(position_enc[1:, 0::2])  # dim 2i
     position_enc[1:, 1::2] = np.cos(position_enc[1:, 1::2])  # dim 2i+1
 
-    return torch.from_numpy(position_enc).type(torch.FloatTensor)
+    return torch.FloatTensor(position_enc)
 
 
 def get_attn_padding_mask(seq_q, seq_k):
@@ -152,7 +150,7 @@ class Encoder(nn.Module):
             temper_value=0.5
     ):
 
-        super(Encoder, self).__init__()
+        super().__init__()
 
         n_position = n_max_seq + 1
         self.n_max_seq = n_max_seq
@@ -169,16 +167,25 @@ class Encoder(nn.Module):
         assert d_word_vec == d_model
 
         self.position_enc = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-        self.position_enc.weight.data = position_encoding_init(n_position, d_word_vec)
+        self.position_enc.weight = nn.Parameter(
+            position_encoding_init(n_position, d_word_vec),
+            requires_grad=False
+        )
 
         if obj_sub_pos and not self.diagonal_positional_attention:
             # TODO: do we need to learn separate encodings here???
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+
+            self.position_enc2.weight = nn.Parameter(
+                position_encoding_init(n_position, d_word_vec),
+                requires_grad=False
+            )
 
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
-            self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
-
+            self.position_enc3.weight = nn.Parameter(
+                position_encoding_init(n_position, d_word_vec),
+                requires_grad=False
+            )
             self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
 
         elif self.diagonal_positional_attention:
@@ -188,17 +195,23 @@ class Encoder(nn.Module):
             # self.position_dpa = nn.Parameter(torch.FloatTensor((n_position*2)-1, d_word_vec//n_head).cuda())
             # position_encoding_init((n_position*2)-1, d_word_vec//n_head)
 
-            # working
-
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
+
             # TODO: is it better to learn new encodings here?
-            self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
+            self.position_enc2.weight = nn.Parameter(
+                position_encoding_init(n_position, d_word_vec),
+                requires_grad=False
+            )
+
             self.position_enc2.weight.requires_grad = True
 
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             # TODO: is it better to learn new encodings here?
-            self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
-            self.position_enc3.weight.requires_grad = True
+            self.position_enc3.weight = nn.Parameter(
+                position_encoding_init(n_position, d_word_vec),
+                requires_grad=False
+            )
+            # self.position_enc3.weight.requires_grad = True
 
             # TODO: try n_pos, n_pos*2-1
             self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)

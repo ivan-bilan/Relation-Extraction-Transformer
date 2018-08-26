@@ -17,7 +17,7 @@ class Linear(nn.Module):
     def __init__(self, d_in, d_out, bias=True):
         super(Linear, self).__init__()
         self.linear = nn.Linear(d_in, d_out, bias=bias)
-        init.xavier_normal_(self.linear.weight)
+        nn.init.xavier_normal_(self.linear.weight)
 
     def forward(self, x):
         return self.linear(x)
@@ -49,7 +49,7 @@ class LayerNormalization(nn.Module):
     ''' Layer normalization module '''
 
     def __init__(self, d_hid, eps=1e-3):
-        super(LayerNormalization, self).__init__()
+        super().__init__()
 
         self.eps = eps
         self.a_2 = nn.Parameter(torch.ones(d_hid), requires_grad=True)
@@ -87,18 +87,18 @@ class ScaledDotProductAttention(nn.Module):
     ''' Scaled Dot-Product Attention '''
 
     def __init__(self, d_model, attn_dropout=0.1, temper_value=0.5):
-        super(ScaledDotProductAttention, self).__init__()
+        super().__init__()
 
         # add temper as hyperparameter
         self.temper = np.power(d_model, temper_value)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
-        self.softmax = BottleSoftmax(dim=-1)  # ? -1
+        self.softmax = nn.Softmax(dim=2)
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None):
 
         # initial attention
-        attn = torch.bmm(q, k.transpose(1, 2)) / self.temper
-
+        attn = torch.bmm(q, k.transpose(1, 2))
+        attn = attn / self.temper
         verbose_sizes = False
 
         # work with diagonal positional encodings
@@ -114,7 +114,8 @@ class ScaledDotProductAttention(nn.Module):
                 print()
 
             # TODO: do we include temper here as well?
-            attn_pos = torch.bmm(q, position_dpa.transpose(1, 2)) / self.temper
+            attn_pos = torch.bmm(q, position_dpa.transpose(1, 2))
+            attn_pos = attn_pos / self.temper
 
             # apply mask to the diagonal positional attention as well
             if verbose_sizes:
@@ -163,12 +164,7 @@ class ScaledDotProductAttention(nn.Module):
             # print(attn_mask)
             # print(attn_mask.size(), attn.size())
 
-            assert attn_mask.size() == attn.size(), \
-                    'Attention mask shape {} mismatch ' \
-                    'with Attention logit tensor shape ' \
-                    '{}.'.format(attn_mask.size(), attn.size())
-
-            attn.data.masked_fill_(attn_mask, -float('inf'))
+            attn = attn.masked_fill(attn_mask, -np.inf)
 
         # print(attn.size())
 
