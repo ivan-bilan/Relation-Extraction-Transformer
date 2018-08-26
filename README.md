@@ -11,10 +11,10 @@ Ivan Bilan
 
 ## Requirements
 
-- Python 3.6.2
-- PyTorch 0.4
-- CUDA 9.1
-- CuDNN 7.005
+- Python 3.7
+- PyTorch 0.4.1
+- CUDA 9.0  (!CUDA 9.2 is not supported, the diagonal stripe attention doesn't work under it)
+- CuDNN 7.005  (CuDNN 7.1 is also not supported)
 
 ## Preparation
 

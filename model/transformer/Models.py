@@ -115,7 +115,7 @@ def get_attn_padding_mask(seq_q, seq_k):
     mb_size, len_q = seq_q.size()
     mb_size, len_k = seq_k.size()
     # print(seq_k)
-    print(seq_k.size())
+    # print(seq_k.size())
     pad_attn_mask = seq_k.data.eq(PAD).unsqueeze(1)    # b x 1 x sk
     pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
     # print(pad_attn_mask)

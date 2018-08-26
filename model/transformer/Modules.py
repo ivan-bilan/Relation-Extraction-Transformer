@@ -120,12 +120,6 @@ class ScaledDotProductAttention(nn.Module):
             if verbose_sizes:
                 print(attn_pos.size())   # [150, 86, 86]
 
-            def batch_stripe_2(a):
-                b, i, j = a.size()
-                assert i >= j
-                b_s, k, l = a.stride()
-                return torch.as_strided(a, (b, i - j + 1, j), (b_s, k, k + l))
-
             def batch_stripe(a):
                 """
                 Get a diagonal stripe of a matrix m x n, where n > m
@@ -148,85 +142,11 @@ class ScaledDotProductAttention(nn.Module):
                 # a = a[..., j-1:, :]
                 # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
 
-            def flip_old(x, dim):
-                """ Flip matrix """
-
-                # TODO: follow the official release of optimized flip:
-                # https://github.com/pytorch/pytorch/pull/7873
-
-                dim = x.dim() + dim if dim < 0 else dim
-                indices = [slice(None)] * x.dim()
-                indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device="cuda")
-                return x[tuple(indices)]
-
-            def multi_meshgrid(*args):
-                """
-                Creates a meshgrid from possibly many
-                elements (instead of only 2).
-                Returns a nd tensor with as many dimensions
-                as there are arguments
-                """
-                args = list(args)
-                template = [1 for _ in args]
-                for i in range(len(args)):
-                    n = args[i].shape[0]
-                    template_copy = template.copy()
-                    template_copy[i] = n
-                    args[i] = args[i].view(*template_copy)
-                    # there will be some broadcast magic going on
-                return tuple(args)
-
-            def flip_d(tensor, dims):
-                """
-                This function should be in native PyTorch hopefully after 0.4
-                :param tensor:
-                :param dims:
-                :return:
-                """
-                if not isinstance(dims, (tuple, list)):
-                    dims = [dims]
-                indices = [torch.arange(tensor.shape[dim] - 1, -1, -1,
-                                        dtype=torch.long, device="cuda") for dim in dims]
-                multi_indices = multi_meshgrid(*indices)
-                final_indices = [slice(i) for i in tensor.shape]
-                for i, dim in enumerate(dims):
-                    final_indices[dim] = multi_indices[i]
-                flipped = tensor[final_indices]
-
-                # TODO
-                # need to permute the final dimensions
-                # if dims is not consecutive
-
-                return flipped
-
-            # print(attn_pos.transpose(1, 2).dim())
-
-            # left top to right bottom
-            # dim=-1
-            # attn_pos = batch_stripe(attn_pos.transpose(1, 2))
-
-            # left bottom to right top
-            # dim=-1
-            # TODO: Ausgabe mean position/variance der scores
-            # 1. rausfinden, welche axis wörter, welche axis sind die positionen
-            # 2. für jedes über die positionen axis softmax (wird nur für zusätzliche Analyse verwendet)
-            # 3. Pro Wort: w = softmax(attention_scores), r = alle positions = "np.arange(len(w))"
-            # 4. mean =  weighted_average = np.average(r, weights=w)
-            # 5. std_dev = https://stackoverflow.com/questions/2413522/weighted-standard-deviation-in-numpy
-            # 6. Verteilung pro Satz ausgeben, für folgende Wörter (und erste 20 Sätze):
-            #   - größtes/kleinstes mean
-            #   - größte/kleinste std_dev
-
-            # print(attn_pos.transpose(1, 2))
-
-            # import os
-            # os.environ['CUDA_LAUNCH_BLOCKING'] = '0'
-
             pre_processed = attn_pos.transpose(1, 2)
             do_flip = torch.flip(pre_processed, [2])
             # print(do_flip)
             attn_pos = batch_stripe(do_flip)
-            print(attn_pos)
+            # print(attn_pos)
 
             # print(attn_pos.size())
 
