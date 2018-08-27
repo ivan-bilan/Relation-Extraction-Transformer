@@ -16,7 +16,7 @@ from tqdm import tqdm
 from utils import constant, helper, vocab
 from global_random_seed import RANDOM_SEED
 PAD = 0
-
+ABS_MAX_LEN = 96
 
 # make everything reproducable
 np.random.seed(RANDOM_SEED)
@@ -122,23 +122,27 @@ class DataLoader(object):
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
             # print("inst_position", inst_position)
 
-            # working dpa
-            obj_positions_single2 = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
+            # working dpa #BR
+            # obj_positions_single2 = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
+
             # print(obj_positions_single)
             # print()
 
             # max len -1
             # TODO: change the code in rnn.py if you want to revert this and use the above one
-            obj_positions_single = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
+            #obj_positions_single = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
+            relative_positions = self.bin_positions(get_position_modified(int((l/2))-1, int((l/2))-1, l*2))
+
+
             # print(obj_positions_single)
             # print(len(obj_positions_single))
 
             # sanity check on whether we doubled the size of pos vector correctly
-            if len(obj_positions_single) != len(obj_positions_single2):
-                print(
-                    "FAILED creating relative positions",
-                    len(obj_positions_single2), "doubled:", len(obj_positions_single), len(inst_position)
-                )
+            #if len(obj_positions_single) != len(obj_positions_single2):
+            #    print(
+            #        "FAILED creating relative positions",
+            #        len(obj_positions_single2), "doubled:", len(obj_positions_single), len(inst_position)
+            #    )
 
             # print(obj_positions_single)
             # print(len(obj_positions_single))
@@ -180,7 +184,7 @@ class DataLoader(object):
 
             # return vector of the whole partitioned data
             processed += [
-                (tokens, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single,
+                (tokens, pos, ner, deprel, subj_positions, obj_positions, relative_positions,
                            inst_position, relation)
                           ]
 
@@ -231,24 +235,23 @@ class DataLoader(object):
         else:
             return new_list_final
 
-    def bin_positions(self, positions_list, width):
+    def bin_positions(self, positions_list):
         """
         Recalculate the word positions binning them given a binning distance:
-        e.g. input=[-4,-3,-3,-2,-2,-1,-1,0,0,1,1,2,2,3,3,4] and window=3
-              --> output=[-3,-2,-2,-2,-1,-1,-1,0,0,1,1,1,2,2,2,3]
+        e.g. input = [-3 -2 -1  0  1  2  3  4  5  6  7]
+              --> output=[-2 -2 -1  0  1  2  2  3  3  3  3]
 
         # this was one of the other ideas we tried, but it is not used anywhere,
         # instead we use the relative word positions function above.
 
         :param positions_list: list of word positions relative to the query or object
-        :param width: width of the bin window
+        :param width: ignored
         :return: new positions
         """
 
         a = np.array(positions_list)
-        a[a>0] = (a[a>0]+(width-1))//width
-        a[a<0] = (a[a<0])//width
-
+        a[a>0] = np.floor(np.log2(a[a>0])) + 1
+        a[a<0] = -np.floor(np.log2(-a[a<0])) - 1
         return a.tolist()
 
     def extract_lemmas(self, tokens, i):

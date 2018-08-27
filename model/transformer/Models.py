@@ -196,7 +196,7 @@ class Encoder(nn.Module):
             self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
             self.position_enc3.weight.requires_grad = True
 
-            # TODO: try n_pos, n_pos*2-1
+            # TODO: try n_pos, n_pos*2-1 #BR
             self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
 
             # TODO: investigate if we need pos encoding here as well
