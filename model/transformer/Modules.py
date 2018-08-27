@@ -11,6 +11,7 @@ torch.backends.cudnn.deterministic = True
 torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
 
+WEIGHT_FUNCTION_MODE = 'dot'
 
 class Linear(nn.Module):
     ''' Simple Linear layer with xavier init '''
@@ -235,9 +236,45 @@ class ScaledDotProductAttention(nn.Module):
             attn.data.masked_fill_(attn_mask, -float('inf'))
 
         # print(attn.size())
-
-        attn = self.softmax(attn)
+        if WEIGHT_FUNCTION_MODE == 'softmax':
+            attn = self.softmax(attn)
+        elif WEIGHT_FUNCTION_MODE == 'dot':
+            pass
+        else:
+            raise NotImplementedError('Unsupported weight function: ' + WEIGHT_FUNCTION_MODE)
         attn = self.dropout(attn)
+
+        output = torch.bmm(attn, v)
+
+        return output, attn
+
+
+    def forward_concat(self, q, k, v, attn_mask=None, position_dpa=None):
+
+        # combine each query with each key.
+
+        # 1) queries and keys must be repeated for combination.
+        # repeat q blockwise
+        batch_size, sent_len, vec_size = q.size()[1]
+        q_ = np.repeat(q, sent_len, axis=1) # TODO: translate from numpy to PyTorch
+        # repeat k alternating
+        k_ = np.tile(k, (sent_len, 1)) # TODO: translate from numpy to PyTorch
+
+        # 2) concatenate vectors
+        concat_vecs = np.stack([q_, k_], axis=2).reshape(batch_size, sent_len, sent_len, -1) # TODO: translate from numpy to PyTorch
+        attn = torch.matmul(concat_vecs, ['some trainable weight vector with size 2*vec_size']) # TODO: verfy result is [batch_size, sent_len, sent_len]
+
+        attn = nn.ReLU(attn)
+        
+        verbose_sizes = False
+        if verbose_sizes:
+            print("using diagonal positional encodings 2")
+            print()
+            print("q.size()                    ", q.size())                             # [150, 86, 120]
+            print("k.size()                    ", k.size())                             # [150, 86, 120]
+            print("concat_vecs.size()          ", concat_vecs.size())                   # [150, 86, 86, 240]
+            print("attn.size()                 ", attn.size())                          # [150, 86, 86]
+            print()
 
         output = torch.bmm(attn, v)
 
