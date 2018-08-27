@@ -234,12 +234,14 @@ class Encoder(nn.Module):
             # src_seq = src_seq + self.position_enc(src_pos)
             # + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
 
-            if self.relative_positions:
+            # TODO: have to fix this, see next TODO
+            # if self.relative_positions:
                 # add object positions only
-                src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
-            else:
+            #     src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+            # else:
                 # TODO: this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
-                src_seq += self.position_enc(src_pos)  # src_pos
+                # src_seq += self.position_enc(src_pos)  # src_pos
+            src_seq += self.position_enc(src_pos)  # src_pos
 
         elif self.diagonal_positional_attention:
 
@@ -250,13 +252,13 @@ class Encoder(nn.Module):
             # src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
 
             # use both object and subject encodings
+            # TODO: add up absolute pos encodings here as well?
             src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
 
             verbose_sizes = False
 
             if verbose_sizes:
                 print("src_seq.size():", src_seq.size())
-                # TODO: try obj/subj positions
                 print("using diagonal positional encodings 0")
                 print(pe_features[2])
                 print(pe_features[2].size())
