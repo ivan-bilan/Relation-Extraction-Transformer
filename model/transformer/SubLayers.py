@@ -34,15 +34,15 @@ class MultiHeadAttention(nn.Module):
         self.w_vs = nn.Linear(d_model, n_head * d_v)
 
         # TODO: try # , nonlinearity='relu'
-        # nn.init.kaiming_normal_(self.w_qs.weight)  # xavier_normal used originally
-        # nn.init.kaiming_normal_(self.w_ks.weight)  # xavier_normal
-        # nn.init.kaiming_normal_(self.w_vs.weight)  # xavier_normal
+        nn.init.kaiming_normal_(self.w_qs.weight)  # xavier_normal used originally
+        nn.init.kaiming_normal_(self.w_ks.weight)  # xavier_normal
+        nn.init.kaiming_normal_(self.w_vs.weight)  # xavier_normal
 
-        # new weight initialization as per:
+        # new weight initialization as per (doesn't seem to improve performance):
         # https://github.com/jadore801120/attention-is-all-you-need-pytorch/commit/2077515a8ab24f4abdda9089c502fa14f32fc5d9
-        nn.init.normal_(self.w_qs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
-        nn.init.normal_(self.w_ks.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
-        nn.init.normal_(self.w_vs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_v)))
+        # nn.init.normal_(self.w_qs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
+        # nn.init.normal_(self.w_ks.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_k)))
+        # nn.init.normal_(self.w_vs.weight, mean=0, std=np.sqrt(2.0 / (d_model + d_v)))
 
         # for relative positional encodings
         self.pos_dpa = nn.Linear(d_model, n_head * d_k)
@@ -56,7 +56,11 @@ class MultiHeadAttention(nn.Module):
 
         # TODO: test this, initially dropout was always set to 0.1!
         # TODO: higher makes the model stable, but Recall is now much lower!
-        self.attention = ScaledDotProductAttention(d_k, scaled_dropout, temper_value)
+
+        # this is from the original paper, where temper is calculated based on d_k
+        # self.attention = ScaledDotProductAttention(d_k, scaled_dropout, temper_value)
+        # in our case, d_model works better
+        self.attention = ScaledDotProductAttention(d_model, scaled_dropout, temper_value)
 
         if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)
