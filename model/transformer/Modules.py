@@ -66,7 +66,7 @@ class ScaledDotProductAttention(nn.Module):
                 b_s, k, l = a.stride()
 
                 # left top to right bottom
-                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + 1))
+                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + l))
 
                 # left bottom to right top
                 # a = a[..., j-1:, :]

@@ -234,14 +234,12 @@ class Encoder(nn.Module):
             # src_seq = src_seq + self.position_enc(src_pos)
             # + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
 
-            # TODO: have to fix this, see next TODO
-            # if self.relative_positions:
-                # add object positions only
-            #     src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
-            # else:
-                # TODO: this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
-                # src_seq += self.position_enc(src_pos)  # src_pos
+            # add sinusoids here
             src_seq += self.position_enc(src_pos)  # src_pos
+            # or add object pos encodings instead
+            # src_seq += self.position_enc2(pe_features[1])
+            # or just add all of them, but each vector has
+            # to be added on a separate line!
 
         elif self.diagonal_positional_attention:
 
@@ -251,8 +249,7 @@ class Encoder(nn.Module):
             # use only the object embeddings
             # src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
 
-            # use both object and subject encodings
-            # TODO: add up absolute pos encodings here as well?
+            # use both object and subject encodings?
             src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
 
             verbose_sizes = False
