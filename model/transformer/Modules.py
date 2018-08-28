@@ -11,7 +11,8 @@ torch.backends.cudnn.deterministic = True
 torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
 
-WEIGHT_FUNCTION_MODE = 'dot'
+WEIGHT_FUNCTION_MODE = 'softmax'
+
 
 class Linear(nn.Module):
     ''' Simple Linear layer with xavier init '''
@@ -137,7 +138,7 @@ class ScaledDotProductAttention(nn.Module):
                 b_s, k, l = a.stride()
 
                 # left top to right bottom
-                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + 1))
+                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + l))
 
                 # left bottom to right top
                 # a = a[..., j-1:, :]
@@ -247,7 +248,6 @@ class ScaledDotProductAttention(nn.Module):
         output = torch.bmm(attn, v)
 
         return output, attn
-
 
     def forward_concat(self, q, k, v, attn_mask=None, position_dpa=None):
 
