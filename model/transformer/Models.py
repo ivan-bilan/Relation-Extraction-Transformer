@@ -241,7 +241,7 @@ class Encoder(nn.Module):
             # else:
                 # TODO: this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
                 # src_seq += self.position_enc(src_pos)  # src_pos
-            src_seq += self.position_enc(src_pos)  # src_pos
+            src_seq = src_seq + self.position_enc(src_pos)  # src_pos
 
         elif self.diagonal_positional_attention:
 

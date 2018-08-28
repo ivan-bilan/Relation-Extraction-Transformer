@@ -185,8 +185,11 @@ class PositionwiseFeedForward(nn.Module):
             residual_permuted = residual.permute(0, 2, 1)
 
             # have to make everything contiguous to make it run on CUDA
-            outputs = self.layer_norm(outputs.contiguous() + residual_permuted.contiguous())
+
+            outputs = outputs.contiguous() + residual_permuted.contiguous()
+            outputs = self.layer_norm(outputs)
             # move columns back
             return outputs.permute(0, 2, 1)
         else:
-            return self.layer_norm(output + residual)
+            output = output + residual
+            return self.layer_norm(output)
