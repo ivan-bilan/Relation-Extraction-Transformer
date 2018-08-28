@@ -1,11 +1,9 @@
 ''' Define the Transformer model '''
 
-import math
 import copy
 import torch
 import torch.nn as nn
 import numpy as np
-from torch.autograd import Variable
 from .Layers import EncoderLayer
 from .Constants import *
 
@@ -19,77 +17,16 @@ torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
 
 
-class Embeddings(nn.Module):
-
-    def __init__(self, d_model, vocab):
-        super(Embeddings, self).__init__()
-        self.lut = nn.Embedding(vocab, d_model)
-        self.d_model = d_model
-
-    def forward(self, x):
-        return self.lut(x) * math.sqrt(self.d_model)
-
-
-class PositionalEncoding(nn.Module):
-    """
-    Implement the PE function.
-    """
-
-    def __init__(self, d_model, dropout, max_len=96):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-
-        # Compute the positional encodings once in log space.
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float64).unsqueeze(1)
-
-        # TODO: what type is this in the 0.4 version?
-        arange_tensor = torch.arange(0, d_model, 2, dtype=torch.float64) * -(math.log(10000.0) / d_model)
-        # print(arange_tensor)
-        div_term = torch.exp(arange_tensor)
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        x = x + Variable(self.pe[:, :x.size(1)], requires_grad=False)
-        return self.dropout(x)
-
-
-class PositionalEncodingLookup(nn.Module):
-    """
-    Implement the PE function.
-    """
-
-    def __init__(self, d_model, max_len=96):
-        super(PositionalEncoding, self).__init__()
-
-        # Compute the positional encodings once in log space.
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) *
-                             -(math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        x = Variable(self.pe[:, :x.size(1)], requires_grad=False)
-        return x
-
-
 def position_encoding_init(n_position, d_hid, padding_idx=None):
     ''' Sinusoid position encoding table '''
 
-    def cal_angle(hid_idx, position):
+    def cal_angle(position, hid_idx):
         return position / np.power(10000, 2 * (hid_idx // 2) / d_hid)
 
-    def get_posi_angle_vec(position, d_hid):
-        return [cal_angle(hid_j, position) for hid_j in range(d_hid)]
+    def get_posi_angle_vec(position):
+        return [cal_angle(position, hid_j) for hid_j in range(d_hid)]
 
-    sinusoid_table = np.array([get_posi_angle_vec(pos_i, d_hid) for pos_i in range(n_position)])
+    sinusoid_table = np.array([get_posi_angle_vec(pos_i) for pos_i in range(n_position)])
 
     sinusoid_table[:, 0::2] = np.sin(sinusoid_table[:, 0::2])  # dim 2i
     sinusoid_table[:, 1::2] = np.cos(sinusoid_table[:, 1::2])  # dim 2i+1
@@ -174,7 +111,6 @@ class Encoder(nn.Module):
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             self.position_enc3.weight.requires_grad = True
 
-            # TODO: try n_pos, n_pos*2-1
             # self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
             self.position_dpa = nn.Embedding((n_position * 2) - 1, d_word_vec, padding_idx=PAD)
             # make sure embeddings are trainable for dpa
@@ -230,12 +166,8 @@ class Encoder(nn.Module):
         # decide whether to add subject and object positional vectors to the normal positional vectors
         if self.obj_sub_pos and not self.diagonal_positional_attention:  # this is missing!!!
 
-            # original 64f score
-            # src_seq = src_seq + self.position_enc(src_pos)
-            # + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
-
             # add sinusoids here
-            src_seq += self.position_enc(src_pos)  # src_pos
+            src_seq = src_seq + self.position_enc(src_pos)  # src_pos
             # or add object pos encodings instead
             # src_seq += self.position_enc2(pe_features[1])
             # or just add all of them, but each vector has

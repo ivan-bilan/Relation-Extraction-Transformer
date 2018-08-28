@@ -28,7 +28,6 @@ class MultiHeadAttention(nn.Module):
         self.use_batch_norm = use_batch_norm
         self.residual_bool = residual_bool
 
-        # TODO: default without cuda, do we need cuda call here?
         self.w_qs = nn.Linear(d_model, n_head * d_k)
         self.w_ks = nn.Linear(d_model, n_head * d_k)
         self.w_vs = nn.Linear(d_model, n_head * d_v)
