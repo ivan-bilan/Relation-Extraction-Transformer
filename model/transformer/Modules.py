@@ -138,7 +138,7 @@ class ScaledDotProductAttention(nn.Module):
                 b_s, k, l = a.stride()
 
                 # left top to right bottom
-                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + l))
+                return torch.as_strided(a, (b, i - j + 1, j), (b_s, k, k + l))
 
                 # left bottom to right top
                 # a = a[..., j-1:, :]
@@ -216,9 +216,11 @@ class ScaledDotProductAttention(nn.Module):
 
             # print(attn_pos.size())
 
+            verbose_sizes = False
             if verbose_sizes:
                 print(attn_pos.size())
                 print(attn.size())
+
                 print(attn_pos.transpose(1, 2).size())
 
             attn = attn + attn_pos.transpose(1, 2)

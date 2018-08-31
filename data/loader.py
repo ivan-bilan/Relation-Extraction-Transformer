@@ -131,8 +131,7 @@ class DataLoader(object):
             # max len -1
             # TODO: change the code in rnn.py if you want to revert this and use the above one
             #obj_positions_single = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
-            relative_positions = self.bin_positions(get_position_modified(int((l/2))-1, int((l/2))-1, l*2))
-
+            relative_positions = self.bin_positions(get_position_modified(l-1, l-1, l*2-1))
 
             # print(obj_positions_single)
             # print(len(obj_positions_single))
