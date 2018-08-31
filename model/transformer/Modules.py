@@ -2,14 +2,21 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import numpy as np
+import math
+import operator
 
 from global_random_seed import RANDOM_SEED
-# make everything reproducable
+# make everything reproducible
+from utils.attention_investigation import investigate_attention
+
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 torch.backends.cudnn.deterministic = True
 torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
+
+from utils.vocab import Vocab
+
 
 WEIGHT_FUNCTION_MODE = 'softmax'
 
@@ -96,7 +103,12 @@ class ScaledDotProductAttention(nn.Module):
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = BottleSoftmax(dim=-1)  # ? -1
 
-    def forward(self, q, k, v, attn_mask=None, position_dpa=None):
+        # this is only used in attention investigation
+        # TODO: set it as a flag
+        vocab_file = 'dataset/vocab/vocab.pkl'
+        self.vocab = Vocab(vocab_file, load=True)
+
+    def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
 
         # initial attention
         attn = torch.bmm(q, k.transpose(1, 2)) / self.temper
@@ -213,6 +225,13 @@ class ScaledDotProductAttention(nn.Module):
             #   - größtes/kleinstes mean
             #   - größte/kleinste std_dev
             attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
+
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # TODO: add this as a parameter to eval.py
+            investigate_attention_flag = True
+
+            if investigate_attention_flag:
+                investigate_attention(attn, attn_pos, sentence_words, self.vocab)
 
             # print(attn_pos.size())
 

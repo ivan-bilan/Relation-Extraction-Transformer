@@ -6,6 +6,7 @@ from .Constants import *
 from .SubLayers import MultiHeadAttention, PositionwiseFeedForward
 
 from global_random_seed import RANDOM_SEED
+
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 torch.backends.cudnn.deterministic = True
@@ -39,7 +40,8 @@ class EncoderLayer(nn.Module):
             d_model, d_inner_hid, dropout=dropout, use_batch_norm=use_batch_norm
         )
 
-    def forward(self, enc_input, slf_attn_mask=None, position_dpa=None):  # enc_non_embedded, enc_input, enc_pos,
+    def forward(self, enc_input, slf_attn_mask=None, position_dpa=None,
+                sentence_words=None):  # enc_non_embedded, enc_input, enc_pos,
 
         verbose_sizes = False
         if position_dpa is not None and verbose_sizes:
@@ -47,7 +49,8 @@ class EncoderLayer(nn.Module):
 
         # here q, k, w are all the same at input
         enc_output, enc_slf_attn = self.slf_attn(
-            enc_input, enc_input, enc_input, attn_mask=slf_attn_mask, position_dpa=position_dpa
+            enc_input, enc_input, enc_input, attn_mask=slf_attn_mask, position_dpa=position_dpa,
+            sentence_words=sentence_words
         )
 
         # do feed forward
