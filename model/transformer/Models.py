@@ -273,7 +273,7 @@ class Encoder(nn.Module):
             # first add the obj/subj embeddings to the word embeddings
             # TODO: try all variants here!, also without any obj/subj encodings
 
-            src_seq += self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+            src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
             # src_seq += self.position_enc2(pe_features[0])
 
             verbose_sizes = False
