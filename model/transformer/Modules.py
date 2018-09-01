@@ -228,7 +228,7 @@ class ScaledDotProductAttention(nn.Module):
 
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # TODO: add this as a parameter to eval.py
-            investigate_attention_flag = True
+            investigate_attention_flag = False
 
             if investigate_attention_flag:
                 investigate_attention(attn, attn_pos, sentence_words, self.vocab)

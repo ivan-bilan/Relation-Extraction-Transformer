@@ -34,7 +34,6 @@ print()
 # do this if you run this code in a Notebook
 # import sys; sys.argv=['']; del sys  # this has to be done if argparse is used in the notebook
 
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--data_dir', type=str, default='dataset/tacred')

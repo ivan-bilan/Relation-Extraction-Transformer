@@ -18,7 +18,7 @@ from global_random_seed import RANDOM_SEED
 PAD = 0
 ABS_MAX_LEN = 96
 
-# make everything reproducable
+# make everything reproducible
 np.random.seed(RANDOM_SEED)
 random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
@@ -134,6 +134,10 @@ class DataLoader(object):
 
             # TODO: add a flag to use this or the previous one instead
             relative_positions = self.bin_positions(get_position_modified(l-1, l-1, l*2-1))
+            # original not binned, doesn't work
+            # relative_positions = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens + tokens)])
+            # relative_positions = relative_positions[:-1]  # skip last
+
 
             # print(obj_positions_single)
             # print(len(obj_positions_single))
