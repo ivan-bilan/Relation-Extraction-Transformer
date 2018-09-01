@@ -17,8 +17,8 @@ torch.cuda.manual_seed_all(RANDOM_SEED)
 
 from utils.vocab import Vocab
 
-
-WEIGHT_FUNCTION_MODE = 'softmax'
+# softmax is default
+WEIGHT_FUNCTION_MODE = 'dot'   # softmax, dot, concat
 
 
 class Linear(nn.Module):
@@ -107,6 +107,8 @@ class ScaledDotProductAttention(nn.Module):
         # TODO: set it as a flag
         vocab_file = 'dataset/vocab/vocab.pkl'
         self.vocab = Vocab(vocab_file, load=True)
+
+        self.tanh = nn.Tanh()
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
 
@@ -261,7 +263,9 @@ class ScaledDotProductAttention(nn.Module):
         if WEIGHT_FUNCTION_MODE == 'softmax':
             attn = self.softmax(attn)
         elif WEIGHT_FUNCTION_MODE == 'dot':
-            pass
+            scale = 1000
+            # TODO: try without scale
+            attn = scale * self.tanh(attn / scale)
         else:
             raise NotImplementedError('Unsupported weight function: ' + WEIGHT_FUNCTION_MODE)
         attn = self.dropout(attn)
