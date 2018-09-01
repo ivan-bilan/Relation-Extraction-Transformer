@@ -62,4 +62,15 @@ Precision (micro): 42.165%
 ####################################################################################################
 
 
+tanh only
+
+Final Score:
+Calculating Precision: correct_by_relation= 2242.0 / guessed_by_relation= 4079.0
+Calculating Recall: correct_by_relation= 2242.0 / gold_by_relation= 3325.0
+only_non_relation: 3325.0
+Precision (micro): 54.964%
+   Recall (micro): 67.429%
+       F1 (micro): 60.562%
+
+####################################################################################################
 
