@@ -18,7 +18,7 @@ torch.cuda.manual_seed_all(RANDOM_SEED)
 from utils.vocab import Vocab
 
 # softmax is default
-WEIGHT_FUNCTION_MODE = 'dot'   # softmax, dot, concat
+WEIGHT_FUNCTION_MODE = 'softmax'   # softmax, dot, concat
 
 
 class Linear(nn.Module):
@@ -109,6 +109,8 @@ class ScaledDotProductAttention(nn.Module):
         self.vocab = Vocab(vocab_file, load=True)
 
         self.tanh = nn.Tanh()
+
+        self.conv = nn.Conv2d(240, kernel_size=1, out_channels=1)
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
 
@@ -217,15 +219,7 @@ class ScaledDotProductAttention(nn.Module):
 
             # left bottom to right top
             # dim=-1
-            # TODO: Ausgabe mean position/variance der scores
-            # 1. rausfinden, welche axis wörter, welche axis sind die positionen
-            # 2. für jedes über die positionen axis softmax (wird nur für zusätzliche Analyse verwendet)
-            # 3. Pro Wort: w = softmax(attention_scores), r = alle positions = "np.arange(len(w))"
-            # 4. mean =  weighted_average = np.average(r, weights=w)
-            # 5. std_dev = https://stackoverflow.com/questions/2413522/weighted-standard-deviation-in-numpy
-            # 6. Verteilung pro Satz ausgeben, für folgende Wörter (und erste 20 Sätze):
-            #   - größtes/kleinstes mean
-            #   - größte/kleinste std_dev
+
             attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
 
             # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -262,18 +256,33 @@ class ScaledDotProductAttention(nn.Module):
         # print(attn.size())
         if WEIGHT_FUNCTION_MODE == 'softmax':
             attn = self.softmax(attn)
+
         elif WEIGHT_FUNCTION_MODE == 'dot':
-            scale = 1000
+
+            scale = 10000
             # TODO: try without scale
             attn = scale * self.tanh(attn / scale)
+
+        elif WEIGHT_FUNCTION_MODE == 'concat':
+            # TODO: this still needs work in the PyTorch 0.4.0 version, skip for now
+            a = q
+            b = k
+            bs, s, val = a.size()
+            a_ = a.repeat(1, 1, s).view(bs, s * s, val)
+            b_ = b.repeat(1, s, 1)
+            concat_vec = torch.stack((a_, b_), 2).view(bs, s, s, -1)  # confirmed size: torch.Size([150, 64, 64, 240])
+            attn = self.conv(concat_vec.permute((0, 3, 1, 2))).squeeze()
+
         else:
             raise NotImplementedError('Unsupported weight function: ' + WEIGHT_FUNCTION_MODE)
+
         attn = self.dropout(attn)
 
         output = torch.bmm(attn, v)
 
         return output, attn
 
+    """
     def forward_concat(self, q, k, v, attn_mask=None, position_dpa=None):
 
         # combine each query with each key.
@@ -304,3 +313,4 @@ class ScaledDotProductAttention(nn.Module):
         output = torch.bmm(attn, v)
 
         return output, attn
+    """

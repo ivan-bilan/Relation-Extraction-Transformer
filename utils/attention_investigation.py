@@ -13,7 +13,18 @@ torch.backends.cudnn.deterministic = True
 torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
 
+# Already implemented: Ausgabe mean position/variance der scores
+# 1. rausfinden, welche axis wörter, welche axis sind die positionen
+# 2. für jedes über die positionen axis softmax (wird nur für zusätzliche Analyse verwendet)
+# 3. Pro Wort: w = softmax(attention_scores), r = alle positions = "np.arange(len(w))"
+# 4. mean =  weighted_average = np.average(r, weights=w)
+# 5. std_dev = https://stackoverflow.com/questions/2413522/weighted-standard-deviation-in-numpy
+# 6. Verteilung pro Satz ausgeben, für folgende Wörter (und erste 20 Sätze):
+#   - größtes/kleinstes mean
+#   - größte/kleinste std_dev
 
+
+# TODO: finish me
 def plot_generator_with_softmax(data):
 
     import numpy as np
@@ -88,6 +99,7 @@ def plot_generator_with_softmax(data):
     # plt.close(fig)
 
 
+# TODO: finish me
 def plot_generator_without_softmax(data):
 
     import numpy as np
@@ -180,7 +192,6 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
     of_data = dict()
     in_32_data = dict()
     in_16_data = dict()
-
 
     for head in list_of_head:
         for what_attention_to_investigate in list_of_combinations:
