@@ -216,6 +216,7 @@ class ScaledDotProductAttention(nn.Module):
 
             if verbose_sizes:
                 print(attn_pos.size())
+                print(attn_pos[0])
                 print(attn.size())
                 print(attn_pos.transpose(1, 2).size())
 
