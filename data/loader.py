@@ -120,43 +120,15 @@ class DataLoader(object):
 
             # create word positional vector for self-attention
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
-            # print("inst_position", inst_position)
-
-            # working dpa #BR
-            # obj_positions_single2 = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
-
-            # print(obj_positions_single)
-            # print()
-
-            # max len -1
-            # TODO: change the code in rnn.py if you want to revert this and use the above one
 
             # this is positional embedding for self-attention without binning
             # relative_positions = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
             # with binning
             relative_positions = self.bin_positions(get_position_modified(int((l/2))-1, int((l/2))-1, l*2))
 
-            # print(obj_positions_single)
-            # print(len(obj_positions_single))
-
-            # sanity check on whether we doubled the size of pos vector correctly
-            #if len(obj_positions_single) != len(obj_positions_single2):
-            #    print(
-            #        "FAILED creating relative positions",
-            #        len(obj_positions_single2), "doubled:", len(obj_positions_single), len(inst_position)
-            #    )
-
-            # print(obj_positions_single)
-            # print(len(obj_positions_single))
-            # print()
-
-            # print("obj_positions_single", obj_positions_single)
-
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
-            # print(obj_positions)
-            # obj_positions_single = get_positions(d['obj_start'], d['obj_end'], l)
 
             # pass relative positional vectors
             if opt["relative_positions"]:
@@ -180,9 +152,6 @@ class DataLoader(object):
 
             # one-hot encoding for relation classes
             relation = constant.LABEL_TO_ID[d['relation']]
-
-            # print("inst_position", inst_position, type(inst_position), inst_position)
-            # print("subj_positions", subj_positions, type(subj_positions), subj_positions)
 
             # return vector of the whole partitioned data
             processed += [

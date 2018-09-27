@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.init as init
 import numpy as np
 
 from global_random_seed import RANDOM_SEED
@@ -74,6 +73,7 @@ class ScaledDotProductAttention(nn.Module):
 
             pre_processed = attn_pos.transpose(1, 2)
             do_flip = torch.flip(pre_processed, [2])
+
             # print(do_flip)
             attn_pos = batch_stripe(do_flip)
 
@@ -85,7 +85,7 @@ class ScaledDotProductAttention(nn.Module):
             attn = attn + attn_pos.transpose(1, 2)
 
         if attn_mask is not None:
-            attn = attn.masked_fill(attn_mask, -np.inf)
+            attn = attn.masked_fill_(attn_mask, -np.inf)
 
         attn = self.softmax(attn)
         attn = self.dropout(attn)
