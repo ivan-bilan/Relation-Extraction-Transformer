@@ -147,7 +147,7 @@ parser.add_argument('--decay_epoch', type=int, default=15, help='Start LR decay 
 parser.add_argument('--optim', type=str, default='sgd', help='sgd, asgd, adagrad, adam, nadam or adamax.')
 parser.add_argument('--num_epoch', type=int, default=60)
 parser.add_argument('--batch_size', type=int, default=50)
-parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
+parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
 
 # info for model saving
 parser.add_argument('--log_step', type=int, default=400, help='Print log every k steps.')
