@@ -185,7 +185,6 @@ class Encoder(nn.Module):
             # position_encoding_init((n_position*2)-1, d_word_vec//n_head)
 
             # working
-
             self.position_enc2 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             # TODO: is it better to learn new encodings here?
             self.position_enc2.weight.data = position_encoding_init(n_position, d_word_vec)
@@ -196,7 +195,7 @@ class Encoder(nn.Module):
             self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
             self.position_enc3.weight.requires_grad = True
 
-            # TODO: try n_pos, n_pos*2-1
+            # TODO: try n_pos, n_pos*2-1 #BR
             self.position_dpa = nn.Embedding((n_position*2)-1, d_word_vec//n_head, padding_idx=PAD)
 
             # TODO: investigate if we need pos encoding here as well
@@ -258,10 +257,9 @@ class Encoder(nn.Module):
 
             if self.relative_positions:
                 # add object positions only
-                src_seq = src_seq + self.position_enc2(pe_features[1]) # + self.position_enc3(pe_features[0])
+                src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
             else:
-                # TODO
-                # this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
+                # TODO: this is a fallback, for some reason non-relative encoding doesn't work for obj/subj positions
                 src_seq += self.position_enc(src_pos)  # src_pos
 
             # new
@@ -272,8 +270,12 @@ class Encoder(nn.Module):
 
             # first add the obj/subj embeddings to the word embeddings
             # TODO: try all variants here!, also without any obj/subj encodings
-
+            # src_pos --> sentence positions
+            # pe_features[0] --> subject positions
+            # pe_features[1] --> object positions
+            # pe_features[2] --> sentence positions doubled
             src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
+            # src_seq += self.position_enc2(pe_features[0])
 
             verbose_sizes = False
 
@@ -286,7 +288,6 @@ class Encoder(nn.Module):
 
             # now we take the modified positional word encodings
             position_dpa = self.position_dpa(pe_features[2])  # src_pos of size 2n
-
             # position_dpa = self.position_dpa2.forward(pe_features[1])  # src_pos
 
             if verbose_sizes:
@@ -307,7 +308,8 @@ class Encoder(nn.Module):
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
                 slf_attn_mask=enc_slf_attn_mask,
-                position_dpa=position_dpa
+                position_dpa=position_dpa,
+                sentence_words=enc_non_embedded
             )
 
         enc_slf_attns += [enc_slf_attn]

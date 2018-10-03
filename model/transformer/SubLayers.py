@@ -67,7 +67,7 @@ class MultiHeadAttention(nn.Module):
         # dpa???
         # init.kaiming_normal(self.position_dpa2)  # xavier_normal
 
-    def forward(self, q, k, v, attn_mask=None, position_dpa=None):
+    def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
 
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
@@ -133,7 +133,7 @@ class MultiHeadAttention(nn.Module):
             #    print(position_dpa.size())
 
             # do the last view
-            position_dpa = position_dpa.view(-1, len_q * 2, d_k)  # (n_head*batch_size) x len_q x d_k
+            position_dpa = position_dpa.view(-1, len_q * 2 - 1, d_k)  # (n_head*batch_size) x len_q x d_k
 
             if verbose_sizes:
                 print("dpa after last view:", position_dpa.size())
@@ -159,7 +159,8 @@ class MultiHeadAttention(nn.Module):
                 outputs, attns = self.attention(
                     q_s, k_s, v_s,
                     attn_mask=attn_mask.repeat(n_head, 1, 1),
-                    position_dpa=position_dpa
+                    position_dpa=position_dpa,
+                    sentence_words=sentence_words
                 )
 
             else:
