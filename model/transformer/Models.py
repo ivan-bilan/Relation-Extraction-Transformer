@@ -249,9 +249,8 @@ class Encoder(nn.Module):
         position_dpa = None
 
         # decide whether to add subject and object positional vectors to the normal positional vectors
-        if self.obj_sub_pos and not self.diagonal_positional_attention:  # this is missing!!!
+        if self.obj_sub_pos and not self.diagonal_positional_attention:
 
-            # original 64f score
             # src_seq = src_seq + self.position_enc(src_pos)
             # + self.position_enc2(pe_features[1]) + self.position_enc3(pe_features[0])
 
@@ -281,7 +280,6 @@ class Encoder(nn.Module):
 
             if verbose_sizes:
                 print("src_seq.size():", src_seq.size())
-                # TODO: try obj/subj positions
                 print("using diagonal positional encodings 0")
                 print(pe_features[2])
                 print(pe_features[2].size())

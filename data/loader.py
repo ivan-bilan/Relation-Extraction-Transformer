@@ -1,8 +1,3 @@
-"""
-Data loader for TACRED json files.
-"""
-
-
 import re
 import json
 import math
@@ -15,6 +10,11 @@ from tqdm import tqdm
 
 from utils import constant, helper, vocab
 from global_random_seed import RANDOM_SEED
+
+"""
+Data loader for TACRED json files.
+"""
+
 PAD = 0
 ABS_MAX_LEN = 96
 
@@ -57,11 +57,11 @@ class DataLoader(object):
             data = [data[i] for i in indices]
 
         id2label = dict([(v, k) for k, v in constant.LABEL_TO_ID.items()])
-        self.labels = [id2label[d[-1]] for d in data] 
+        self.labels = [id2label[d[-1]] for d in data]
         self.num_examples = len(data)
 
         # chunk into batches
-        data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
+        data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
         print("{} batches created for {}".format(len(data), filename))
@@ -94,7 +94,7 @@ class DataLoader(object):
             elif opt["use_lemmas"] and opt["preload_lemmas"]:
                 tokens = lemmatized_tokens[i]
 
-            # get max sequence length
+            # TODO: get max sequence length (within batch?)
             # if max_sequence_length <= len(d['token']):
             #    max_sequence_length = len(d['token'])
 
@@ -103,13 +103,11 @@ class DataLoader(object):
                 # print("LOWERIN")
                 tokens = [t.lower() for t in tokens]
 
-            # TODO: save lemmas list as pickle and load it before the for loop
-
             # anonymize tokens
             ss, se = d['subj_start'], d['subj_end']
             os, oe = d['obj_start'], d['obj_end']
-            tokens[ss:se+1] = ['SUBJ-'+d['subj_type']] * (se-ss+1)
-            tokens[os:oe+1] = ['OBJ-'+d['obj_type']] * (oe-os+1)
+            tokens[ss:se + 1] = ['SUBJ-' + d['subj_type']] * (se - ss + 1)
+            tokens[os:oe + 1] = ['OBJ-' + d['obj_type']] * (oe - os + 1)
 
             tokens = map_to_ids(tokens, vocab.word2id)
 
@@ -122,48 +120,15 @@ class DataLoader(object):
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
             # print("inst_position", inst_position)
 
-            # working dpa #BR
-            # obj_positions_single2 = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens+tokens)])
-
-            # print(obj_positions_single)
-            # print()
-
-            # max len -1
-            # TODO: change the code in rnn.py if you want to revert this and use the above one
-            # obj_positions_single = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
-
-            # TODO: add a flag to use this or the previous one instead
-            relative_positions = self.bin_positions(get_position_modified(l-1, l-1, l*2-1))
-            # original not binned, doesn't work
-            # relative_positions = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens + tokens)])
-            # relative_positions = relative_positions[:-1]  # skip last
-
-
-            # print(obj_positions_single)
-            # print(len(obj_positions_single))
-
-            # sanity check on whether we doubled the size of pos vector correctly
-            #if len(obj_positions_single) != len(obj_positions_single2):
-            #    print(
-            #        "FAILED creating relative positions",
-            #        len(obj_positions_single2), "doubled:", len(obj_positions_single), len(inst_position)
-            #    )
-
-            # print(obj_positions_single)
-            # print(len(obj_positions_single))
-            # print()
-
-            # print("obj_positions_single", obj_positions_single)
+            # double the amount of positional embeddings for the diagonal positional attention
+            relative_positions = self.bin_positions(get_position_modified(l - 1, l - 1, l * 2 - 1))
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
             obj_positions = get_positions(d['obj_start'], d['obj_end'], l)
-            # print(obj_positions)
-            # obj_positions_single = get_positions(d['obj_start'], d['obj_end'], l)
 
             # pass relative positional vectors
             if opt["relative_positions"]:
-
                 # print(subj_positions)
                 # do binning for subject positions
                 # subj_positions_orig = subj_positions
@@ -190,8 +155,8 @@ class DataLoader(object):
             # return vector of the whole partitioned data
             processed += [
                 (tokens, pos, ner, deprel, subj_positions, obj_positions, relative_positions,
-                           inst_position, relation)
-                          ]
+                 inst_position, relation)
+            ]
 
         # pickle spacy lemmatized text
         if len(data) == 68124 and opt["use_lemmas"] and not opt["preload_lemmas"]:
@@ -217,7 +182,7 @@ class DataLoader(object):
         :return: new positions
         """
 
-        new_list = [math.ceil(math.log(abs(x)+1, 2)) for x in positions_list]
+        new_list = [math.ceil(math.log(abs(x) + 1, 2)) for x in positions_list]
         new_list_final = list()
 
         # reverse positives
@@ -255,11 +220,13 @@ class DataLoader(object):
         """
 
         a = np.array(positions_list)
-        a[a>0] = np.floor(np.log2(a[a>0])) + 1
-        a[a<0] = -np.floor(np.log2(-a[a<0])) - 1
+        a[a > 0] = np.floor(np.log2(a[a > 0])) + 1
+        a[a < 0] = -np.floor(np.log2(-a[a < 0])) - 1
         return a.tolist()
 
     def extract_lemmas(self, tokens, i):
+        # TODO: do more experiments with lemmas
+
         init_tokens = tokens
         # if lemma
         # use lemmas instead of raw text
@@ -268,6 +235,8 @@ class DataLoader(object):
         # print(tokens)
 
         tokens = u' '.join(tokens)
+
+        # TODO: find a way to get rid of the regex plugs and integrate lemmas into batching directly
         # do this twice
         tokens = re.sub(r"(\w),?\.?-(\w)", "\g<1>_\g<2>", tokens)
         tokens = re.sub(r"(\w),(\w)", "\g<1>_\g<2>", tokens)
@@ -399,7 +368,7 @@ class DataLoader(object):
         # sort all fields by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
         batch, orig_idx = sort_all(batch, lens)
-        
+
         # word dropout
         if not self.eval:
             # TODO: experiment with word dropouts!
@@ -407,16 +376,17 @@ class DataLoader(object):
         else:
             words = batch[0]
 
-        # get_long_tensor creates a matrix out of list of lists
+        # TODO: get rid of using indexing to rely on the batch item types
 
+        # get_long_tensor creates a matrix out of list of lists
         # convert to tensors
-        words = get_long_tensor(words, batch_size)              # matrix of tokens
-        pos = get_long_tensor(batch[1], batch_size)             # matrix of part of speech embeddings
-        ner = get_long_tensor(batch[2], batch_size)             # matrix for NER embeddings
-        deprel = get_long_tensor(batch[3], batch_size)          # stanford dependency parser stuff... not sure
+        words = get_long_tensor(words, batch_size)  # matrix of tokens
+        pos = get_long_tensor(batch[1], batch_size)  # matrix of part of speech embeddings
+        ner = get_long_tensor(batch[2], batch_size)  # matrix for NER embeddings
+        deprel = get_long_tensor(batch[3], batch_size)  # stanford dependency parser stuff... not sure
 
         subj_positions = get_long_tensor(batch[4], batch_size)  # matrix of positional lists relative to subject
-        obj_positions = get_long_tensor(batch[5], batch_size)   # matrix of positional lists relative to object
+        obj_positions = get_long_tensor(batch[5], batch_size)  # matrix of positional lists relative to object
 
         # do padding here, it will get the longest sequence and pad the rest
         obj_positions_single = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
@@ -425,7 +395,7 @@ class DataLoader(object):
 
         # new masks with positional padding
         masks = torch.eq(words, 0)  # should we also do +src_pos?
-        rels = torch.LongTensor(batch[8])                       # list of relation labels for this batch
+        rels = torch.LongTensor(batch[8])  # list of relation labels for this batch
 
         return (words, masks, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single, src_pos, rels, orig_idx)
 
@@ -442,21 +412,20 @@ def map_to_ids(tokens, vocab):
 def get_positions(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
     # print(start_idx, end_idx, length)
-    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
+    return list(range(-start_idx, 0)) + [0] * (end_idx - start_idx + 1) + list(range(1, length - end_idx))
 
 
 def get_position_modified(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
     # print(start_idx, end_idx, length)
-    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
+    return list(range(-start_idx, 0)) + [0] * (end_idx - start_idx + 1) + list(range(1, length - end_idx))
 
 
 def get_long_tensor(tokens_list, batch_size):
-    """ Convert list of list of tokens to a padded LongTensor. """
-
-    # here the padding is done!!!!
-
-    # print(tokens_list)
+    """
+    Convert list of list of tokens to a padded LongTensor.
+    Also perform padding here.
+    """
 
     token_len = max(len(x) for x in tokens_list)
 

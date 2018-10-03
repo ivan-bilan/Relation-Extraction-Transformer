@@ -7,7 +7,6 @@ import json
 import argparse
 
 
-### IO
 def check_dir(d):
     if not os.path.exists(d):
         print("Directory {} does not exist. Exit.".format(d))

@@ -1,6 +1,3 @@
-"""
-Ensemble the predictions from different model outputs.
-"""
 import argparse
 import json
 import pickle
@@ -9,6 +6,11 @@ from collections import Counter
 
 from data.loader import DataLoader
 from utils import scorer, constant
+
+
+"""
+Ensemble the predictions from different model outputs.
+"""
 
 
 def parse_args():

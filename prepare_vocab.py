@@ -1,6 +1,3 @@
-"""
-Prepare vocabulary and initial word vectors.
-"""
 import json
 import pickle
 import argparse
@@ -8,6 +5,10 @@ import numpy as np
 from collections import Counter
 
 from utils import vocab, constant, helper
+
+"""
+Prepare vocabulary and initial word vectors.
+"""
 
 
 def parse_args():

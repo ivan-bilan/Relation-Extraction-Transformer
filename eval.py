@@ -1,7 +1,3 @@
-"""
-Run evaluation with saved models.
-"""
-
 import os
 import random
 import argparse
@@ -17,6 +13,12 @@ from data.loader import DataLoader
 from model.rnn import RelationModel
 from utils import torch_utils, scorer, constant, helper
 from utils.vocab import Vocab
+
+
+"""
+Run evaluation with saved models.
+"""
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

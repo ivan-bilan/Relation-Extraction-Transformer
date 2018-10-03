@@ -1,12 +1,8 @@
-''' Define the sublayers in encoder/decoder layer '''
-
 import torch
 import torch.nn as nn
 import torch.nn.init as init
 from .Modules import BottleLinear as Linear
 from .Modules import ScaledDotProductAttention
-# from transformer.Modules import BottleLayerNormalization as LayerNormalization
-from .Modules import LayerNormalization
 
 from global_random_seed import RANDOM_SEED
 torch.manual_seed(RANDOM_SEED)
@@ -14,9 +10,13 @@ torch.backends.cudnn.deterministic = True
 torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
 
+"""
+Define the sublayers in the self-attention encoder layer
+"""
+
 
 class MultiHeadAttention(nn.Module):
-    ''' Multi-Head Attention module '''
+    """ Multi-Head Attention module """
 
     def __init__(self, n_head, d_model, d_k, d_v, position_dpa=None, dropout=0.1, scaled_dropout=0.1,
                  use_batch_norm=True, residual_bool=False, temper_value=0.5
@@ -36,8 +36,6 @@ class MultiHeadAttention(nn.Module):
         self.w_ks = nn.Parameter(torch.FloatTensor(n_head, d_model, d_k).to("cuda"))
         self.w_vs = nn.Parameter(torch.FloatTensor(n_head, d_model, d_v).to("cuda"))
 
-        # self.position_dpa2 = nn.Parameter(torch.FloatTensor(n_head, (96 * 2) - 1, d_k).cuda())
-
         # for dpa, fill with ones
         # self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model*2, d_k).cuda())
         # init.constant(self.dpa_qs, 1)
@@ -48,11 +46,9 @@ class MultiHeadAttention(nn.Module):
 
         if self.use_batch_norm:  # batch norm
             self.layer_norm = nn.BatchNorm1d(d_model)
+            # TODO: continue experiments using GroupNorm
             # self.layer_norm = nn.GroupNorm(d_model, 42)
         else:  # layer norm
-            # pytorch 0.3.1
-            # self.layer_norm = LayerNormalization(d_model)
-            # pytorch 0.4
             self.layer_norm = nn.LayerNorm(d_model)
 
         # TODO: try with , bias=False
@@ -64,7 +60,7 @@ class MultiHeadAttention(nn.Module):
         init.kaiming_normal_(self.w_ks)  # xavier_normal
         init.kaiming_normal_(self.w_vs)  # xavier_normal
 
-        # dpa???
+        # TODO: do we need weights for dpa here?
         # init.kaiming_normal(self.position_dpa2)  # xavier_normal
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
@@ -122,28 +118,11 @@ class MultiHeadAttention(nn.Module):
             if verbose_sizes:
                 print("dpa after repeat 2 view:", position_dpa.size())
 
-            # TODO: this fails if we don't resize by multiplying
-            # self.dpa_qs is a matrix of ones filled out in init
-
-            # size after multiplying: [3, 4550, 120]             # n_head x (batch_size*len_q) x d_model
-            # size after view: [150, 86, 120]                    # (n_head*batch_size) x len_q x d_k
-
-            # position_dpa = torch.bmm(position_dpa, self.position_dpa2)  # n_head x (batch_size*len_q) x d_model
-            # if verbose_sizes:
-            #    print(position_dpa.size())
-
             # do the last view
             position_dpa = position_dpa.view(-1, len_q * 2 - 1, d_k)  # (n_head*batch_size) x len_q x d_k
 
             if verbose_sizes:
                 print("dpa after last view:", position_dpa.size())
-
-            # this view doesn't work
-            # position_dpa = position_dpa.view(n_head, d_model, d_k).view(-1, len_q, d_k)
-
-            if verbose_sizes:
-                print("dpa after bmm:", position_dpa.size())    # [150, 86, 120]
-                print()
 
         # perform attention, result size = (n_head * mb_size) x len_q x d_v
         if attn_mask is not None:

@@ -17,12 +17,16 @@ torch.cuda.manual_seed_all(RANDOM_SEED)
 
 from utils.vocab import Vocab
 
+# TODO: make weighting functions available as an argument in runner.py
 # softmax is default
-WEIGHT_FUNCTION_MODE = 'softmax'   # softmax, dot, concat
+WEIGHT_FUNCTION_MODE = 'softmax'  # Supported options: softmax, dot, concat
 
 
 class Linear(nn.Module):
-    ''' Simple Linear layer with xavier init '''
+    """
+    Simple Linear layer with xavier init
+    """
+
     def __init__(self, d_in, d_out, bias=True):
         super(Linear, self).__init__()
         self.linear = nn.Linear(d_in, d_out, bias=bias)
@@ -33,14 +37,16 @@ class Linear(nn.Module):
 
 
 class Bottle(nn.Module):
-    ''' Perform the reshape routine before and after an operation '''
+    """
+    Perform the reshape routine before and after an operation
+    """
 
     def forward(self, input):
         if len(input.size()) <= 2:
             return super(Bottle, self).forward(input)
 
         size = input.size()[:2]
-        out = super(Bottle, self).forward(input.view(size[0]*size[1], -1))
+        out = super(Bottle, self).forward(input.view(size[0] * size[1], -1))
         return out.view(size[0], size[1], -1)
 
 
@@ -54,28 +60,6 @@ class BottleSoftmax(Bottle, nn.Softmax):
     pass
 
 
-class LayerNormalization(nn.Module):
-    ''' Layer normalization module '''
-
-    def __init__(self, d_hid, eps=1e-3):
-        super(LayerNormalization, self).__init__()
-
-        self.eps = eps
-        self.a_2 = nn.Parameter(torch.ones(d_hid), requires_grad=True)
-        self.b_2 = nn.Parameter(torch.zeros(d_hid), requires_grad=True)
-
-    def forward(self, z):
-        if z.size(1) == 1:
-            return z
-
-        mu = torch.mean(z, keepdim=True, dim=-1)
-        sigma = torch.std(z, keepdim=True, dim=-1)
-        ln_out = (z - mu.expand_as(z)) / (sigma.expand_as(z) + self.eps)
-        ln_out = ln_out * self.a_2.expand_as(ln_out) + self.b_2.expand_as(ln_out)
-
-        return ln_out
-
-
 class BatchBottle(nn.Module):
     ''' Perform the reshape routine before and after an operation '''
 
@@ -83,13 +67,8 @@ class BatchBottle(nn.Module):
         if len(input.size()) <= 2:
             return super(BatchBottle, self).forward(input)
         size = input.size()[1:]
-        out = super(BatchBottle, self).forward(input.view(-1, size[0]*size[1]))
+        out = super(BatchBottle, self).forward(input.view(-1, size[0] * size[1]))
         return out.view(-1, size[0], size[1])
-
-
-class BottleLayerNormalization(BatchBottle, LayerNormalization):
-    ''' Perform the reshape routine before and after a layer normalization'''
-    pass
 
 
 class ScaledDotProductAttention(nn.Module):
@@ -99,17 +78,16 @@ class ScaledDotProductAttention(nn.Module):
         super(ScaledDotProductAttention, self).__init__()
 
         # add temper as hyperparameter
-        self.temper = np.power(d_model, temper_value)    # 0.5 originally
+        self.temper = np.power(d_model, temper_value)  # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = BottleSoftmax(dim=-1)  # ? -1
 
         # this is only used in attention investigation
-        # TODO: set it as a flag
+        # TODO: set it as a flag in runner.py
         vocab_file = 'dataset/vocab/vocab.pkl'
         self.vocab = Vocab(vocab_file, load=True)
 
         self.tanh = nn.Tanh()
-
         self.conv = nn.Conv2d(240, kernel_size=1, out_channels=1)
 
     def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
@@ -124,19 +102,19 @@ class ScaledDotProductAttention(nn.Module):
             if verbose_sizes:
                 print("using diagonal positional encodings 2")
                 print()
-                print("q.size()                    ", q.size())                             # [150, 86, 120]
-                print("k.transpose(1, 2).size()    ", k.transpose(1, 2).size())             # [150, 120, 86]
-                print("attn.size()                 ", attn.size())                          # [150, 86, 86]
-                print("position_dpa.size()         ", position_dpa.size())                  # [150, 86, 120]
+                print("q.size()                    ", q.size())  # [150, 86, 120]
+                print("k.transpose(1, 2).size()    ", k.transpose(1, 2).size())  # [150, 120, 86]
+                print("attn.size()                 ", attn.size())  # [150, 86, 86]
+                print("position_dpa.size()         ", position_dpa.size())  # [150, 86, 120]
                 print("position_dpa.transpose(1, 2)", position_dpa.transpose(1, 2).size())  # [150, 120, 86]
                 print()
 
-            # TODO: do we include temper here as well?
+            # TODO: do we need to include temper here as well?
             attn_pos = torch.bmm(q, position_dpa.transpose(1, 2)) / self.temper
 
             # apply mask to the diagonal positional attention as well
             if verbose_sizes:
-                print(attn_pos.size())   # [150, 86, 86]
+                print(attn_pos.size())  # [150, 86, 86]
 
             def batch_stripe(a):
                 """
@@ -159,17 +137,6 @@ class ScaledDotProductAttention(nn.Module):
                 # left bottom to right top
                 # a = a[..., j-1:, :]
                 # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
-
-            def flip_old(x, dim):
-                """ Flip matrix """
-
-                # TODO: follow the official release of optimized flip:
-                # https://github.com/pytorch/pytorch/pull/7873
-
-                dim = x.dim() + dim if dim < 0 else dim
-                indices = [slice(None)] * x.dim()
-                indices[dim] = torch.arange(x.size(dim) - 1, -1, -1, dtype=torch.long, device="cuda")
-                return x[tuple(indices)]
 
             def multi_meshgrid(*args):
                 """
@@ -205,52 +172,34 @@ class ScaledDotProductAttention(nn.Module):
                     final_indices[dim] = multi_indices[i]
                 flipped = tensor[final_indices]
 
-                # TODO
-                # need to permute the final dimensions
-                # if dims is not consecutive
-
                 return flipped
 
             # print(attn_pos.transpose(1, 2).dim())
-
-            # left top to right bottom
-            # dim=-1
-            # attn_pos = batch_stripe(attn_pos.transpose(1, 2))
-
-            # left bottom to right top
-            # dim=-1
-
             attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
 
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             # TODO: add this as a parameter to eval.py
+            # this is used to save all attention scores for a given sentence in separate files
             investigate_attention_flag = False
-
             if investigate_attention_flag:
                 investigate_attention(attn, attn_pos, sentence_words, self.vocab)
-
-            # print(attn_pos.size())
 
             verbose_sizes = False
             if verbose_sizes:
                 print(attn_pos.size())
                 print(attn_pos[0])
                 print(attn.size())
-
                 print(attn_pos.transpose(1, 2).size())
 
             attn = attn + attn_pos.transpose(1, 2)
-
-            # print(attn.size())
 
         if attn_mask is not None:
             # print(attn_mask)
             # print(attn_mask.size(), attn.size())
 
             assert attn_mask.size() == attn.size(), \
-                    'Attention mask shape {} mismatch ' \
-                    'with Attention logit tensor shape ' \
-                    '{}.'.format(attn_mask.size(), attn.size())
+                'Attention mask shape {} mismatch ' \
+                'with Attention logit tensor shape ' \
+                '{}.'.format(attn_mask.size(), attn.size())
 
             attn.data.masked_fill_(attn_mask, -float('inf'))
 
@@ -259,13 +208,12 @@ class ScaledDotProductAttention(nn.Module):
             attn = self.softmax(attn)
 
         elif WEIGHT_FUNCTION_MODE == 'dot':
-
             scale = 10000
             # TODO: try without scale
             attn = scale * self.tanh(attn / scale)
 
         elif WEIGHT_FUNCTION_MODE == 'concat':
-            # TODO: this still needs work in the PyTorch 0.4.0 version, skip for now
+            # TODO: this still needs work in the PyTorch 0.4.0 version, over that version this should work fine
             a = q
             b = k
             bs, s, val = a.size()
@@ -278,40 +226,5 @@ class ScaledDotProductAttention(nn.Module):
             raise NotImplementedError('Unsupported weight function: ' + WEIGHT_FUNCTION_MODE)
 
         attn = self.dropout(attn)
-
         output = torch.bmm(attn, v)
-
         return output, attn
-
-    """
-    def forward_concat(self, q, k, v, attn_mask=None, position_dpa=None):
-
-        # combine each query with each key.
-
-        # 1) queries and keys must be repeated for combination.
-        # repeat q blockwise
-        batch_size, sent_len, vec_size = q.size()[1]
-        q_ = np.repeat(q, sent_len, axis=1) # TODO: translate from numpy to PyTorch
-        # repeat k alternating
-        k_ = np.tile(k, (sent_len, 1)) # TODO: translate from numpy to PyTorch
-
-        # 2) concatenate vectors
-        concat_vecs = np.stack([q_, k_], axis=2).reshape(batch_size, sent_len, sent_len, -1) # TODO: translate from numpy to PyTorch
-        attn = torch.matmul(concat_vecs, ['some trainable weight vector with size 2*vec_size']) # TODO: verfy result is [batch_size, sent_len, sent_len]
-
-        attn = nn.ReLU(attn)
-        
-        verbose_sizes = False
-        if verbose_sizes:
-            print("using diagonal positional encodings 2")
-            print()
-            print("q.size()                    ", q.size())                             # [150, 86, 120]
-            print("k.size()                    ", k.size())                             # [150, 86, 120]
-            print("concat_vecs.size()          ", concat_vecs.size())                   # [150, 86, 86, 240]
-            print("attn.size()                 ", attn.size())                          # [150, 86, 86]
-            print()
-
-        output = torch.bmm(attn, v)
-
-        return output, attn
-    """

@@ -1,5 +1,5 @@
-Self-Attention for Relation Extraction
-=========================
+Position-Aware Self-Attention for Relation Extraction
+=====================================================
 
 "Relation extraction using deep neural networks and self-attention"
 

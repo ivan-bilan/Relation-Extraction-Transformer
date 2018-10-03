@@ -238,7 +238,7 @@ class NoamOpt:
 def get_optimizer(name, parameters, lr):
     if name == 'sgd':
         # TODO: test momentum and weight_decay
-        # 1e-07 decay? , decay is like l2, try without!!!  # weight_decay=1e-6
+        # 1e-07 decay?  # weight_decay=1e-6
         return torch.optim.SGD(parameters, lr=lr)  # bad results: weight_decay=1e-07, , momentum=0.9, nesterov=True
     elif name == 'nadam':
         return NAdam(parameters, lr=lr)
