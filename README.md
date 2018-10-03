@@ -98,4 +98,57 @@ In order to run the ensembled model use:
  bash ensemble.sh
  ```
 
+## Best results
+
+Results on the evaluation set:
+```
+Precision (micro): 65.386%
+   Recall (micro): 68.060%
+       F1 (micro): 66.696%
+```
+
+Per-relation statistics:
+ ```
+org:alternate_names                  P:  74.78%  R:  80.75%  F1:  77.65%  #: 213
+org:city_of_headquarters             P:  71.59%  R:  76.83%  F1:  74.12%  #: 82
+org:country_of_headquarters          P:  55.70%  R:  40.74%  F1:  47.06%  #: 108
+org:dissolved                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 2
+org:founded                          P:  84.21%  R:  86.49%  F1:  85.33%  #: 37
+org:founded_by                       P:  72.22%  R:  38.24%  F1:  50.00%  #: 68
+org:member_of                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 18
+org:members                          P:   0.00%  R:   0.00%  F1:   0.00%  #: 31
+org:number_of_employees/members      P:  65.22%  R:  78.95%  F1:  71.43%  #: 19
+org:parents                          P:  40.00%  R:  19.35%  F1:  26.09%  #: 62
+org:political/religious_affiliation  P:  25.81%  R:  80.00%  F1:  39.02%  #: 10
+org:shareholders                     P:  75.00%  R:  23.08%  F1:  35.29%  #: 13
+org:stateorprovince_of_headquarters  P:  64.18%  R:  84.31%  F1:  72.88%  #: 51
+org:subsidiaries                     P:  55.17%  R:  36.36%  F1:  43.84%  #: 44
+org:top_members/employees            P:  66.44%  R:  84.68%  F1:  74.46%  #: 346
+org:website                          P:  53.33%  R:  92.31%  F1:  67.61%  #: 26
+per:age                              P:  78.06%  R:  92.50%  F1:  84.67%  #: 200
+per:alternate_names                  P:   0.00%  R:   0.00%  F1:   0.00%  #: 11
+per:cause_of_death                   P:  63.64%  R:  40.38%  F1:  49.41%  #: 52
+per:charges                          P:  66.91%  R:  90.29%  F1:  76.86%  #: 103
+per:children                         P:  38.30%  R:  48.65%  F1:  42.86%  #: 37
+per:cities_of_residence              P:  52.91%  R:  62.43%  F1:  57.28%  #: 189
+per:city_of_birth                    P:  50.00%  R:  20.00%  F1:  28.57%  #: 5
+per:city_of_death                    P: 100.00%  R:  21.43%  F1:  35.29%  #: 28
+per:countries_of_residence           P:  50.00%  R:  55.41%  F1:  52.56%  #: 148
+per:country_of_birth                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 5
+per:country_of_death                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 9
+per:date_of_birth                    P:  77.78%  R:  77.78%  F1:  77.78%  #: 9
+per:date_of_death                    P:  62.16%  R:  42.59%  F1:  50.55%  #: 54
+per:employee_of                      P:  64.34%  R:  69.70%  F1:  66.91%  #: 264
+per:origin                           P:  68.81%  R:  56.82%  F1:  62.24%  #: 132
+per:other_family                     P:  59.09%  R:  43.33%  F1:  50.00%  #: 60
+per:parents                          P:  58.82%  R:  56.82%  F1:  57.80%  #: 88
+per:religion                         P:  44.16%  R:  72.34%  F1:  54.84%  #: 47
+per:schools_attended                 P:  64.29%  R:  60.00%  F1:  62.07%  #: 30
+per:siblings                         P:  61.29%  R:  69.09%  F1:  64.96%  #: 55
+per:spouse                           P:  56.58%  R:  65.15%  F1:  60.56%  #: 66
+per:stateorprovince_of_birth         P:  40.00%  R:  50.00%  F1:  44.44%  #: 8
+per:stateorprovince_of_death         P:  80.00%  R:  28.57%  F1:  42.11%  #: 14
+per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
+per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
+ ```
  
