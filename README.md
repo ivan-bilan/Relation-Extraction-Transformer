@@ -13,10 +13,10 @@ https://arxiv.org/abs/1807.03052
 
 ## Requirements
 
-- Python 3.6.2
-- PyTorch 0.4
-- CUDA 9.1
-- CuDNN 7.005
+- Python 3.6+
+- PyTorch 0.4.1+
+- CUDA 9.0+ (including CUDA 10)
+- CuDNN 7.005 (up to 7.1)
 
 ## Preparation
 
@@ -97,13 +97,5 @@ In order to run the ensembled model use:
  ```
  bash ensemble.sh
  ```
- 
- ## Limitations 
- 
- Currently there is problem with running the model on certain hardware/software constellation due to 
- the beta state of PyTorch. It was tested and works properly with CUDA 9.1 and CuDNN 7.005. If there are
- any issues try running the model without the relative positional embeddings by including the flag 
- `--no_diagonal_positional_attention`. Also follow the GitHub page of the project for regular updated when the
- open source release is available at https://github.com/ivan-bilan.
- 
+
  

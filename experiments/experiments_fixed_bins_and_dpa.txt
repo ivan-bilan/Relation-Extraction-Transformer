@@ -692,3 +692,139 @@ Precision (micro): 64.835%
 
 ####################################################################################
 
+
+# set --attn_dim to 1000:
+
+$ python eval.py --model_dir saved_models/aaa_bins_35 --model checkpoint_epoch_70.pt
+Loading model from saved_models/aaa_bins_35/checkpoint_epoch_70.pt
+Number of heads:  3
+d_v and d_k:  120.0
+Vocab size 55950 loaded from file
+Fine-tune all embeddings.
+Using weights [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+Vocab size 55950 loaded from file
+Loading data from dataset/tacred/test.json with batch size 50...
+100%|██████████| 15509/15509 [00:01<00:00, 8236.32it/s]
+311 batches created for dataset/tacred/test.json
+
+Running with the following configs:
+        data_dir : dataset/tacred
+        vocab_dir : dataset/vocab
+        emb_dim : 300
+        ner_dim : 30
+        pos_dim : 30
+        hidden_dim : 360
+        hidden_self : 130
+        query_size_attn : 360
+        num_layers : 2
+        num_layers_encoder : 1
+        dropout : 0.4
+        scaled_dropout : 0.1
+        temper_value : 0.5
+        word_dropout : 0.06
+        lstm_dropout : 0.5
+        topn : 10000000000.0
+        lower : False
+        weight_no_rel : 1.0
+        weight_rest : 1.0
+        self_att : True
+        self_att_and_rnn : False
+        use_lemmas : False
+        preload_lemmas : False
+        obj_sub_pos : True
+        use_batch_norm : True
+        diagonal_positional_attention : True
+        relative_positions : True
+        new_residual : True
+        n_head : 3
+        attn : True
+        attn_dim : 1000
+        pe_dim : 30
+        lr : 0.1
+        lr_decay : 0.9
+        decay_epoch : 15
+        optim : sgd
+        num_epoch : 100
+        batch_size : 50
+        max_grad_norm : 1.0
+        log_step : 400
+        log : logs.txt
+        save_epoch : 10
+        save_dir : ./saved_models
+        id : aaa_bins_35
+        info :
+        seed : 1234
+        cuda : True
+        cpu : False
+        num_class : 42
+        vocab_size : 55950
+        model_save_dir : ./saved_models/aaa_bins_35
+
+
+Per-relation statistics:
+org:alternate_names                  P:  76.21%  R:  81.22%  F1:  78.64%  #: 213
+org:city_of_headquarters             P:  70.79%  R:  76.83%  F1:  73.68%  #: 82
+org:country_of_headquarters          P:  56.32%  R:  45.37%  F1:  50.26%  #: 108
+org:dissolved                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 2
+org:founded                          P:  86.84%  R:  89.19%  F1:  88.00%  #: 37
+org:founded_by                       P:  68.09%  R:  47.06%  F1:  55.65%  #: 68
+org:member_of                        P: 100.00%  R:   0.00%  F1:   0.00%  #: 18
+org:members                          P:  20.00%  R:   3.23%  F1:   5.56%  #: 31
+org:number_of_employees/members      P:  60.87%  R:  73.68%  F1:  66.67%  #: 19
+org:parents                          P:  42.86%  R:  14.52%  F1:  21.69%  #: 62
+org:political/religious_affiliation  P:  23.33%  R:  70.00%  F1:  35.00%  #: 10
+org:shareholders                     P:  50.00%  R:  23.08%  F1:  31.58%  #: 13
+org:stateorprovince_of_headquarters  P:  66.10%  R:  76.47%  F1:  70.91%  #: 51
+org:subsidiaries                     P:  51.61%  R:  36.36%  F1:  42.67%  #: 44
+org:top_members/employees            P:  66.44%  R:  84.10%  F1:  74.23%  #: 346
+org:website                          P:  53.33%  R:  92.31%  F1:  67.61%  #: 26
+per:age                              P:  77.33%  R:  95.50%  F1:  85.46%  #: 200
+per:alternate_names                  P:   0.00%  R:   0.00%  F1:   0.00%  #: 11
+per:cause_of_death                   P:  65.79%  R:  48.08%  F1:  55.56%  #: 52
+per:charges                          P:  60.00%  R:  93.20%  F1:  73.00%  #: 103
+per:children                         P:  36.36%  R:  43.24%  F1:  39.51%  #: 37
+per:cities_of_residence              P:  50.87%  R:  61.90%  F1:  55.85%  #: 189
+per:city_of_birth                    P:  50.00%  R:  20.00%  F1:  28.57%  #: 5
+per:city_of_death                    P: 100.00%  R:  25.00%  F1:  40.00%  #: 28
+per:countries_of_residence           P:  43.82%  R:  52.70%  F1:  47.85%  #: 148
+per:country_of_birth                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 5
+per:country_of_death                 P: 100.00%  R:   0.00%  F1:   0.00%  #: 9
+per:date_of_birth                    P:  85.71%  R:  66.67%  F1:  75.00%  #: 9
+per:date_of_death                    P:  69.23%  R:  33.33%  F1:  45.00%  #: 54
+per:employee_of                      P:  67.03%  R:  69.32%  F1:  68.16%  #: 264
+per:origin                           P:  67.83%  R:  59.09%  F1:  63.16%  #: 132
+per:other_family                     P:  66.67%  R:  43.33%  F1:  52.53%  #: 60
+per:parents                          P:  58.33%  R:  55.68%  F1:  56.98%  #: 88
+per:religion                         P:  42.86%  R:  63.83%  F1:  51.28%  #: 47
+per:schools_attended                 P:  64.29%  R:  60.00%  F1:  62.07%  #: 30
+per:siblings                         P:  61.29%  R:  69.09%  F1:  64.96%  #: 55
+per:spouse                           P:  57.53%  R:  63.64%  F1:  60.43%  #: 66
+per:stateorprovince_of_birth         P:  57.14%  R:  50.00%  F1:  53.33%  #: 8
+per:stateorprovince_of_death         P:  80.00%  R:  28.57%  F1:  42.11%  #: 14
+per:stateorprovinces_of_residence    P:  59.77%  R:  64.20%  F1:  61.90%  #: 81
+per:title                            P:  73.23%  R:  89.20%  F1:  80.43%  #: 500
+
+Final Score:
+Calculating Precision: correct_by_relation= 2279.0 / guessed_by_relation= 3539.0
+Calculating Recall: correct_by_relation= 2279.0 / gold_by_relation= 3325.0
+only_non_relation: 3325.0
+Precision (micro): 64.397%
+   Recall (micro): 68.541%
+       F1 (micro): 66.404%
+Prediction scores saved to saved_models/out/test_6.pkl.
+Evaluation ended.
+(cuda2)
+
+###### epoch 80 ##########
+Final Score:
+Calculating Precision: correct_by_relation= 2288.0 / guessed_by_relation= 3562.0
+Calculating Recall: correct_by_relation= 2288.0 / gold_by_relation= 3325.0
+only_non_relation: 3325.0
+Precision (micro): 64.234%
+   Recall (micro): 68.812%
+       F1 (micro): 66.444%
+Prediction scores saved to saved_models/out/test_6.pkl.
+Evaluation ended.
+
+
+########################################################################################
