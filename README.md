@@ -14,7 +14,7 @@ https://arxiv.org/abs/1807.03052
 ## Requirements
 
 - Python 3.6+
-- PyTorch 0.4.1+
+- PyTorch 0.4.0+
 - CUDA 9.0+ (including CUDA 10)
 - CuDNN 7.005 (up to 7.1)
 
