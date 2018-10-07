@@ -144,7 +144,7 @@ parser.add_argument('--lr_decay', type=float, default=0.9)
 parser.add_argument('--decay_epoch', type=int, default=15, help='Start LR decay from this epoch.')
 
 parser.add_argument('--optim', type=str, default='sgd', help='sgd, asgd, adagrad, adam, nadam or adamax.')
-parser.add_argument('--num_epoch', type=int, default=60)
+parser.add_argument('--num_epoch', type=int, default=70)
 parser.add_argument('--batch_size', type=int, default=50)
 parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
 
@@ -256,7 +256,7 @@ def main():
 
     # start training
     for epoch in range(1, opt['num_epoch'] + 1):
-
+        # TODO: if lr warmup is used, the lr console output is not updated
         print(
             "Current params: " + " heads-" + str(opt["n_head"]) + " enc_layers-" + str(opt["num_layers_encoder"]),
             " drop-" + str(opt["dropout"]) + " scaled_drop-" + str(opt["scaled_dropout"]) + " lr-" + str(opt["lr"]),
@@ -334,15 +334,7 @@ def main():
             # do warm_up_for sgd only instead of adam
             do_warmup_trick = False
 
-            if not do_warmup_trick:
-
-                # decay schedule # 15 is best!
-                # simulate patience of x epochs
-                if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
-                    current_lr *= opt['lr_decay']
-                    model.update_lr(current_lr)
-
-            else:
+            if do_warmup_trick:
                 # print("do_warmup_trick")
 
                 # 1 and 5 first worked kind of
@@ -350,6 +342,13 @@ def main():
                 current_lr = 10 * (360 ** (-0.5) * min(epoch ** (-0.5), epoch * 15 ** (-1.5)))
                 # print("current_lr", current_lr)
                 model.update_lr(current_lr)
+
+            else:
+                # decay schedule # 15 is best!
+                # simulate patience of x epochs
+                if len(dev_f1_history) > opt['decay_epoch'] and dev_f1 <= dev_f1_history[-1]:
+                    current_lr *= opt['lr_decay']
+                    model.update_lr(current_lr)
 
         # else, update the learning rate in torch_utils.py
 

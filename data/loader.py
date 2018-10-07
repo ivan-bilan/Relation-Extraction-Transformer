@@ -10,6 +10,7 @@ from tqdm import tqdm
 
 from utils import constant, helper, vocab
 from global_random_seed import RANDOM_SEED
+from utils.extract_lemmas import extract_lemmas
 
 """
 Data loader for TACRED json files.
@@ -89,7 +90,7 @@ class DataLoader(object):
 
             tokens = d['token']
             if opt["use_lemmas"] and not opt["preload_lemmas"]:
-                tokens = self.extract_lemmas(tokens, i)
+                tokens = extract_lemmas(self.nlp, tokens, i)
                 lemmatized_tokens.append(tokens)
             elif opt["use_lemmas"] and opt["preload_lemmas"]:
                 tokens = lemmatized_tokens[i]
@@ -133,15 +134,15 @@ class DataLoader(object):
                 # do binning for subject positions
                 # subj_positions_orig = subj_positions
 
-                # TODO: fix arguments for this
-                subj_positions = self.relativate_word_positions(subj_positions)
+                # TODO: select proper function to do this
+                subj_positions = self.bin_positions(subj_positions)
 
                 # subj_positions = self.bin_positions(subj_positions, 2)
                 # do binning for object positions
                 # print(obj_positions)
 
                 # obj_positions_orig = obj_positions
-                obj_positions = self.relativate_word_positions(obj_positions)
+                obj_positions = self.bin_positions(obj_positions)
 
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)
@@ -172,50 +173,13 @@ class DataLoader(object):
 
         return processed
 
-    def relativate_word_positions(self, positions_list, dpa=None):
-        """
-        Recalculate the word positions by decreasing their relativity based on the distance to
-        query or object:
-        e.g. input=[0,1,2,3,4,5,5,6] --> output=[0,1,2,3,3,4,4,4]
-
-        :param positions_list: list of word positions relative to the query or object
-        :return: new positions
-        """
-
-        new_list = [math.ceil(math.log(abs(x) + 1, 2)) for x in positions_list]
-        new_list_final = list()
-
-        # reverse positives
-        for index, element in enumerate(new_list):
-            if element == 0:
-                new_list_final.extend(new_list[index:])
-                break
-            else:
-                new_element = -element
-                new_list_final.append(new_element)
-
-        # report an error if the length of the sentence and positional encoding doesn't match
-        if len(positions_list) != len(new_list_final):
-            print("Error in positional embeddings!")
-
-        # TODO: how to implement dpa???
-        # try the dpa trick by doubling the position vector
-        if dpa:
-            return new_list_final + new_list_final
-        else:
-            return new_list_final
-
     def bin_positions(self, positions_list):
         """
-        Recalculate the word positions binning them given a binning distance:
+        Recalculate the word positions by binning them:
         e.g. input = [-3 -2 -1  0  1  2  3  4  5  6  7]
               --> output=[-2 -2 -1  0  1  2  2  3  3  3  3]
 
-        # this was one of the other ideas we tried, but it is not used anywhere,
-        # instead we use the relative word positions function above.
-
         :param positions_list: list of word positions relative to the query or object
-        :param width: ignored
         :return: new positions
         """
 
@@ -223,128 +187,6 @@ class DataLoader(object):
         a[a > 0] = np.floor(np.log2(a[a > 0])) + 1
         a[a < 0] = -np.floor(np.log2(-a[a < 0])) - 1
         return a.tolist()
-
-    def extract_lemmas(self, tokens, i):
-        # TODO: do more experiments with lemmas
-
-        init_tokens = tokens
-        # if lemma
-        # use lemmas instead of raw text
-        tokens_1_len = len(tokens)
-        # print(len(tokens))
-        # print(tokens)
-
-        tokens = u' '.join(tokens)
-
-        # TODO: find a way to get rid of the regex plugs and integrate lemmas into batching directly
-        # do this twice
-        tokens = re.sub(r"(\w),?\.?-(\w)", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r"(\w),(\w)", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r"(\w)-+(\w)", "\g<1>_\g<2>", tokens)
-        # tokens = re.sub(r"(\w)/(\w)", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r"(\w)/(\w)/?(\w){,3}?/?(\w){,3}?", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r"(\w)\.+([\w@])", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r" '(\w)", " \g<1>", tokens)
-        tokens = re.sub(r" '(\d)", " \g<1>", tokens)  # ?
-        tokens = re.sub(r" \+(\d)", " \g<1>", tokens)
-        tokens = re.sub(r" ,(\w)", " \g<1>", tokens)
-        tokens = re.sub(r" ,(\d)", "\g<1>", tokens)
-        # tokens = re.sub(r" :(\w)", " \g<1>", tokens)
-        tokens = re.sub(r" [:#]([\d\w-])", " \g<1>", tokens)
-        tokens = re.sub(r"^[:#]([\d\w-])", "\g<1>", tokens)
-
-        tokens = re.sub(r"(\w)[:!?=](\w)", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r"(\w)[:!?=]([A-Z])", "\g<1>_\g<2>", tokens)
-        # tokens = re.sub(r"(\w)=(\w)", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r" <(\w)", " \g<1>", tokens)
-        tokens = re.sub(r"([\w\d])[>!?\]] ?", "\g<1> ", tokens)
-
-        tokens = re.sub(r"(\w)&(\w)", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r"([\w\d])& ", "\g<1> ", tokens)
-
-        tokens = re.sub(r"(\w)\.", "\g<1>", tokens)
-        tokens = re.sub(r"(\w)\* ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)'", "\g<1>", tokens)
-        tokens = re.sub(r"(\w): ", "\g<1> ", tokens)
-        tokens = re.sub(r"([\w\.]); ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)_ ", "\g<1> ", tokens)
-
-        # ;P
-        tokens = re.sub(r" ;([\d\w-])", " \g<1>", tokens)
-
-        # normalize thousands
-        tokens = re.sub(r"(\d+)K ", "\g<1>.000 ", tokens)
-        tokens = re.sub(r"(\d+)[A-Za-z][A-Za-z]? ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\d+)[A-Za-z][A-Za-z]?$", "\g<1> ", tokens)
-        tokens = re.sub(r"(\d+)m+ ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\d+)pm ", "\g<1> ", tokens)
-
-        # trickery TODO: fix this!
-        tokens = re.sub(r" [Ww]ed\.? ", " wedding ", tokens)
-        tokens = re.sub(r" (couldnt|wouldnt) ", " would ", tokens)
-        tokens = re.sub(r" wont ", " will ", tokens)
-        tokens = re.sub(r" cant ", " can ", tokens)
-        tokens = re.sub(r" didnt ", " did ", tokens)
-        tokens = re.sub(r" thats ", " that ", tokens)
-        tokens = re.sub(r"^thats ", "that ", tokens)
-        tokens = re.sub(r" shes ", " she ", tokens)
-        tokens = re.sub(r" hes ", " he ", tokens)
-        tokens = re.sub(r" whats ", " what ", tokens)
-        tokens = re.sub(r" wasnt ", " was ", tokens)
-        tokens = re.sub(r" whos ", " who ", tokens)
-        tokens = re.sub(r" shouldnt ", " should ", tokens)
-        tokens = re.sub(r" theres ", " there ", tokens)
-        tokens = re.sub(r" isnt ", " is ", tokens)
-        tokens = re.sub(r" werent ", " were ", tokens)
-
-        # TODO: ask about this on stackoverflow?
-        tokens = re.sub(r" dont ", " do ", tokens)
-        tokens = re.sub(r" doesnt ", " does ", tokens)
-
-        tokens = re.sub(r"Cant ", "Can ", tokens)
-        tokens = re.sub(r"Hes ", "He ", tokens)
-        tokens = re.sub(r"Thats ", "That ", tokens)
-
-        tokens = re.sub(r" Hed ", " He ", tokens)
-        tokens = re.sub(r" [Ii]m ", " I ", tokens)
-        tokens = re.sub(r"^[Ii]m ", "I ", tokens)
-        # tokens = re.sub(r'[\?\!]+', '.', tokens)
-
-        tokens = re.sub(r'([\!\?\*\_\=\.\#\']){1,}', '\g<1>', tokens)
-        tokens = re.sub(r"(\w)\. ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)\# ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)=(\w)", "\g<1>_\g<2>", tokens)
-
-        # TODO: normalize URLs amd emails?
-        # tokens = re.sub(r'\?{1,}', '?', tokens)
-
-        tokens = self.nlp(tokens)
-
-        # TODO: leave pronouns back in
-        # TODO: make it lower too
-        tokens = [tok.lemma_.lower().strip() if tok.lemma_ != "-PRON-" else tok.lower_ for tok in tokens]
-        # [token.lemma_ for token in tokens]
-
-        if tokens_1_len != len(tokens):
-
-            print("Current sentence index:", i)
-            print(tokens_1_len, len(tokens))
-            print(init_tokens)
-            print(tokens)
-
-            for i, element in enumerate(init_tokens):
-                if init_tokens[i] != tokens[i]:
-                    print("token:", init_tokens[i])
-                    print("posL", i)
-
-        # TODO: if assertion fails, fall back to the original sentence!!!
-        assert tokens_1_len == len(tokens)
-
-        return tokens
 
     def gold(self):
         """ Return gold labels as a list. """

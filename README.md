@@ -14,11 +14,23 @@ https://arxiv.org/abs/1807.03052
 ## Requirements
 
 - Python 3.6+
-- PyTorch 0.4.0+
+- PyTorch 0.4.1+ (including 1.0dev)
 - CUDA 9.0+ (including CUDA 10)
 - CuDNN 7.005 (up to 7.1)
 
-## Preparation
+# How to setup
+## 1. Dataset
+
+The TACRED dataset used for evaluation is currently not publicly available. Follow the original authors' GitHub page
+for more updates: https://github.com/yuhaozhang/tacred-relation
+
+On this page a sample dataset is available at:
+https://github.com/yuhaozhang/tacred-relation/tree/master/dataset/tacred
+
+For this implementation, we use the JSON format of the dataset which can be generated with the JSON generations
+script included in the dataset.
+
+## 2. Vocabulary preparation
 
 First, download and unzip GloVe vectors from the Stanford website, with:
 ```
@@ -32,14 +44,7 @@ python prepare_vocab.py dataset/tacred dataset/vocab --glove_dir dataset/glove
 
 This will write vocabulary and word vectors as a numpy matrix into the dir `dataset/vocab`.
 
-## Dataset
 
-The TACRED dataset used for evaluation is currently not publicly available. Follow the original authors' GitHub page
-for more updates: https://github.com/yuhaozhang/tacred-relation. On this page a sample dataset is available at:
-https://github.com/yuhaozhang/tacred-relation/tree/master/dataset/tacred
-
-For this implementation, we use the JSON format of the dataset which can be generated with the JSON generations
-script included in the dataset.
 
 ## Training
 

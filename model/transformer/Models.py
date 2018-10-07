@@ -8,7 +8,6 @@ import torch.nn as nn
 import numpy as np
 from .Constants import *
 from torch.autograd import Variable
-from .Modules import BottleLinear as Linear
 from .Layers import EncoderLayer
 
 from global_random_seed import RANDOM_SEED
@@ -101,39 +100,17 @@ def position_encoding_init(n_position, d_pos_vec):
 
 def get_attn_padding_mask(seq_q, seq_k):
     """
-    Indicate the padding-related part to mask
-    :param seq_q: 
-    :param seq_k: 
-    :return:
+    Mask out the padded part of the sentence
+    :param seq_q: sentence sequence without the word embeddings
+    :param seq_k: seq_q == seq_k
+    :return: a padding mask
     """
 
-    assert seq_q.dim() == 2 and seq_k.dim() == 2
+    len_q = seq_q.size(1)
+    padding_mask = seq_k.eq(PAD)
+    padding_mask = padding_mask.unsqueeze(1).expand(-1, len_q, -1)  # b x lq x lk
 
-    mb_size, len_q = seq_q.size()
-    mb_size, len_k = seq_k.size()
-    # print(seq_k)
-    pad_attn_mask = seq_k.data.eq(PAD).unsqueeze(1)    # b x 1 x sk
-    pad_attn_mask = pad_attn_mask.expand(mb_size, len_q, len_k)  # b x sq x sk
-    # print(pad_attn_mask)
-    return pad_attn_mask
-
-
-def get_attn_subsequent_mask(seq):
-    """
-    Get an attention mask to avoid using the subsequent info.
-    :param seq:
-    :return:
-    """
-    assert seq.dim() == 2
-
-    attn_shape = (seq.size(0), seq.size(1), seq.size(1))
-    subsequent_mask = np.triu(np.ones(attn_shape), k=1).astype('uint8')
-    subsequent_mask = torch.from_numpy(subsequent_mask)
-
-    if seq.is_cuda:
-        subsequent_mask = subsequent_mask.to("cuda")
-
-    return subsequent_mask
+    return padding_mask
 
 
 class Encoder(nn.Module):

@@ -55,22 +55,6 @@ class BottleLinear(Bottle, Linear):
     pass
 
 
-class BottleSoftmax(Bottle, nn.Softmax):
-    ''' Perform the reshape routine before and after a softmax operation'''
-    pass
-
-
-class BatchBottle(nn.Module):
-    ''' Perform the reshape routine before and after an operation '''
-
-    def forward(self, input):
-        if len(input.size()) <= 2:
-            return super(BatchBottle, self).forward(input)
-        size = input.size()[1:]
-        out = super(BatchBottle, self).forward(input.view(-1, size[0] * size[1]))
-        return out.view(-1, size[0], size[1])
-
-
 class ScaledDotProductAttention(nn.Module):
     ''' Scaled Dot-Product Attention '''
 
@@ -80,7 +64,7 @@ class ScaledDotProductAttention(nn.Module):
         # add temper as hyperparameter
         self.temper = np.power(d_model, temper_value)  # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
-        self.softmax = BottleSoftmax(dim=-1)  # ? -1
+        self.softmax = nn.Softmax(dim=2)
 
         # this is only used in attention investigation
         # TODO: set it as a flag in runner.py
@@ -138,44 +122,10 @@ class ScaledDotProductAttention(nn.Module):
                 # a = a[..., j-1:, :]
                 # return torch.as_strided(a, (b, i-j, j), (b_s, k, l-k))
 
-            def multi_meshgrid(*args):
-                """
-                Creates a meshgrid from possibly many
-                elements (instead of only 2).
-                Returns a nd tensor with as many dimensions
-                as there are arguments
-                """
-                args = list(args)
-                template = [1 for _ in args]
-                for i in range(len(args)):
-                    n = args[i].shape[0]
-                    template_copy = template.copy()
-                    template_copy[i] = n
-                    args[i] = args[i].view(*template_copy)
-                    # there will be some broadcast magic going on
-                return tuple(args)
-
-            def flip(tensor, dims):
-                """
-                This function should be in native PyTorch hopefully after 0.4
-                :param tensor:
-                :param dims:
-                :return:
-                """
-                if not isinstance(dims, (tuple, list)):
-                    dims = [dims]
-                indices = [torch.arange(tensor.shape[dim] - 1, -1, -1,
-                                        dtype=torch.long, device="cuda") for dim in dims]
-                multi_indices = multi_meshgrid(*indices)
-                final_indices = [slice(i) for i in tensor.shape]
-                for i, dim in enumerate(dims):
-                    final_indices[dim] = multi_indices[i]
-                flipped = tensor[final_indices]
-
-                return flipped
-
             # print(attn_pos.transpose(1, 2).dim())
-            attn_pos = batch_stripe(flip(attn_pos.transpose(1, 2), -1))
+            attn_processed = attn_pos.transpose(1, 2)
+            attn_flipped = torch.flip(attn_processed, [2])
+            attn_pos = batch_stripe(attn_flipped)
 
             # TODO: add this as a parameter to eval.py
             # this is used to save all attention scores for a given sentence in separate files
@@ -201,7 +151,7 @@ class ScaledDotProductAttention(nn.Module):
                 'with Attention logit tensor shape ' \
                 '{}.'.format(attn_mask.size(), attn.size())
 
-            attn.data.masked_fill_(attn_mask, -float('inf'))
+            attn = attn.masked_fill_(attn_mask, -np.inf)
 
         # print(attn.size())
         if WEIGHT_FUNCTION_MODE == 'softmax':
@@ -213,7 +163,7 @@ class ScaledDotProductAttention(nn.Module):
             attn = scale * self.tanh(attn / scale)
 
         elif WEIGHT_FUNCTION_MODE == 'concat':
-            # TODO: this still needs work in the PyTorch 0.4.0 version, over that version this should work fine
+            # TODO: add paper for reference
             a = q
             b = k
             bs, s, val = a.size()
