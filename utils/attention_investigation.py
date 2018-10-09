@@ -1,17 +1,17 @@
 import torch
-import torch.nn as nn
-import torch.nn.init as init
 import numpy as np
 import math
 import operator
 
 from global_random_seed import RANDOM_SEED
+
 # make everything reproducible
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 torch.backends.cudnn.deterministic = True
 torch.cuda.manual_seed(RANDOM_SEED)
 torch.cuda.manual_seed_all(RANDOM_SEED)
+
 
 # Already implemented: Ausgabe mean position/variance der scores
 # 1. rausfinden, welche axis wörter, welche axis sind die positionen
@@ -25,85 +25,65 @@ torch.cuda.manual_seed_all(RANDOM_SEED)
 
 
 # TODO: finish me
-def plot_generator_with_softmax(data):
-
+def plot_generator_with_softmax(whole_sentence_graph_dict):
     import numpy as np
-    import pandas as pd
     import seaborn as sns
     import matplotlib.pyplot as plt
 
-    sns.set(style="whitegrid")
+    for single_word in whole_sentence_graph_dict:
+        for head in whole_sentence_graph_dict[single_word]:
 
-    fig = plt.figure(figsize=(8, 6))
+            word = single_word
+            sns.set(style="whitegrid")
+            fig = plt.figure(figsize=(8, 6))
 
-    # Not showing the data lists here
+            def softmax(x):
+                return np.exp(x) / np.exp(x).sum(axis=0)
 
-    def softmax(x):
-        return np.exp(x) / np.exp(x).sum(axis=0)
+            # attn
+            data = whole_sentence_graph_dict[single_word][head]["attn"]
 
-    # attn
-    data = [-0.005951299, -0.029044457, -2.4142258, 2.190176, 1.6590111, -3.6578588, -4.684568, -3.6578588, -3.6578588,
-            6.084622, 13.555143, 13.555143, -4.34307, -1.1962872, -0.47124174, -0.43637118, -8.555032, -6.269103,
-            -4.5881658, -5.9282355, -4.585698, -5.2294097, -6.944389, -3.5933948, -4.3854713, -2.5584598, -4.093828,
-            -7.9165735, -4.7697864, -5.935749, -5.9056034, -3.213047, -8.166379, -5.539582, -6.075837, -4.260547,
-            -2.8777754, -3.6983604, -4.148365, -4.4483614, -2.085313, -3.1456637, -3.706437, 2.0111775, 2.0111775,
-            2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775,
-            2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775, 2.0111775,
-            2.0111775, 2.0111775]
+            # attn_pos
+            data2 = whole_sentence_graph_dict[single_word][head]["attn_pos"]
 
-    # attn_pos
-    data2 = [0.77760446, -0.3654992, -0.3654992, -0.3654992, -0.3654992, -0.3654992, -0.3654992, -0.3654992, -0.3654992,
-             0.5600485, 0.5600485, 0.5600485, 0.5600485, 1.0015192, 1.0015192, -0.8097563, -0.14138925, 0.66161174,
-             -0.43525112, -0.43525112, 0.29473847, 0.29473847, 0.30402362, 0.4407499, 0.99283254, 1.0506727, 1.0493455,
-             1.0368179, 1.0545973, 1.1171892, 1.0651786, 1.1270455, 0.8863518, 0.58156127, 0.6494905, 0.7443865,
-             0.69479305, 0.85680157, 0.63184834, 0.45794958, 0.38933513, 0.1833995, 0.32618314, 0.31002286, 0.23198071,
-             0.53673124, 0.34084955, 0.2578649, -0.8240579, -1.3246806, -1.287403, -1.3355032, -1.1736788, -1.1917881,
-             -1.1917881, -1.7546477, -1.5299661, -1.5299661, -1.6786951, -1.5299661, -1.1985171, -0.49476224,
-             -0.4208252, -0.1696207, -0.33454028]
+            # combined
+            data3 = whole_sentence_graph_dict[single_word][head]["combined"]
 
-    # combined
-    data3 = [0.7716532, -0.39454365, -2.779725, 1.8246768, 1.2935119, -4.023358, -5.050067, -4.023358, -4.023358,
-             6.6446705, 14.115191, 14.115191, -3.7830215, -0.19476795, 0.5302775, -1.2461275, -8.696421, -5.6074915,
-             -5.023417, -6.363487, -4.29096, -4.9346714, -6.6496506, -3.2986562, -4.2205296, -2.393518, -3.9288864,
-             -7.7516317, -4.6048446, -5.7708073, -5.7406616, -3.0481052, -8.452318, -5.8255215, -6.361777, -4.546487,
-             -3.163715, -3.9843, -4.4343047, -4.734301, -2.3712525, -3.4316032, -3.9923766, 1.725238, 1.725238,
-             1.725238, 1.725238, 1.725238, 0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384,
-             0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384, 0.74440384,
-             0.74440384, 0.74440384]
+            softmax_flag = True
 
-    softmax_flag = True
+            if softmax_flag:
+                # plt.bar(range(len(data)), softmax(data), color='b', alpha=0.3, label ='attn') #, hatch="/")
+                # plt.bar(range(len(data2)), softmax(data2), color='g', alpha = 0.3, label ='attn_rel_pos') #, hatch="o")
+                # plt.bar(range(len(data3)), softmax(data3), color='r',alpha = 0.3, label ='attn_comb') #, hatch="\\")
+                plt.plot(range(len(data[:43])), softmax(data[:43]), '-bx', alpha=0.5, label=r'$softmax(y_{inner})$')
+                plt.plot(range(len(data2[:43])), softmax(data2[:43]), '-go', alpha=0.5, lw=2, ms=4,
+                         label=r'$softmax(y_{rel\_pos})$')
+                plt.plot(range(len(data3[:43])), softmax(data3[:43]), '-r+', alpha=0.5, lw=2,
+                         label=r'$softmax(y_{inner} + y_{rel\_pos})$')
+                ax = fig.add_subplot(111)
+                ax.fill_between(range(len(data[:43])), 0, softmax(data[:43]), color='dodgerblue', alpha=0.4)
+                ax.fill_between(range(len(data[:43])), 0, softmax(data2[:43]), color='mediumseagreen', alpha=0.4)
+                ax.fill_between(range(len(data[:43])), 0, softmax(data3[:43]), color='indianred', alpha=0.4)
 
-    if softmax_flag:
-        # plt.bar(range(len(data)), softmax(data), color='b', alpha=0.3, label ='attn') #, hatch="/")
-        # plt.bar(range(len(data2)), softmax(data2), color='g', alpha = 0.3, label ='attn_rel_pos') #, hatch="o")
-        # plt.bar(range(len(data3)), softmax(data3), color='r',alpha = 0.3, label ='attn_comb') #, hatch="\\")
-        plt.plot(range(len(data[:43])), softmax(data[:43]), '-bx', alpha=0.5, label=r'$softmax(y_{inner})$')
-        plt.plot(range(len(data2[:43])), softmax(data2[:43]), '-go', alpha=0.5, lw=2, ms=4,
-                 label=r'$softmax(y_{rel\_pos})$')
-        plt.plot(range(len(data3[:43])), softmax(data3[:43]), '-r+', alpha=0.5, lw=2,
-                 label=r'$softmax(y_{inner} + y_{rel\_pos})$')
-        ax = fig.add_subplot(111)
-        ax.fill_between(range(len(data[:43])), 0, softmax(data[:43]), color='dodgerblue', alpha=0.4)
-        ax.fill_between(range(len(data[:43])), 0, softmax(data2[:43]), color='mediumseagreen', alpha=0.4)
-        ax.fill_between(range(len(data[:43])), 0, softmax(data3[:43]), color='indianred', alpha=0.4)
+            position = whole_sentence_graph_dict[single_word][head]["position"]
 
-    plt.title("Head 1")
-    plt.xlabel("Word Position in the Sentence")
-    plt.ylabel("Attention Probability")
+            graph_title = "".join(["Head ", head, " (", "Word: ", word, " Position:", position, ")"])
+            plt.title(graph_title)
+            plt.xlabel("Word Position in the Sentence")
+            plt.ylabel("Attention Probability")
 
-    # plt.grid()
-    plt.legend(fontsize=16)
+            # plt.grid()
+            plt.legend(fontsize=16)
 
-    plt.savefig('head_1_in_32_softmax_lines.png', dpi=350)
+            graph_filename = "".join(["utils/plots/head_", head, "_", word, "_", position, "_softmax_lines.png"])
+            plt.savefig(graph_filename, dpi=350)
 
-    # plt.close(fig)
+            plt.close(fig)
 
 
 # TODO: finish me
-def plot_generator_without_softmax(data):
-
+def plot_generator_without_softmax():
     import numpy as np
-    import pandas as pd
     import seaborn as sns
     import matplotlib.pyplot as plt
 
@@ -177,23 +157,25 @@ def plot_generator_without_softmax(data):
 
 
 def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
-
     ########################################
     # options for the investigations BEGIN #
     ########################################
 
     # choose which head to investigate
-    # head = 3.0
     list_of_head = [1.0, 2.0, 3.0]
     list_of_combinations = ["attn", "attn_pos", "combined"]
 
     # save data for plots
     # TODO: generate plots automatically
+
+    from collections import defaultdict
+    whole_sentence_graph_dict = defaultdict(lambda: defaultdict(dict))
     of_data = dict()
     in_32_data = dict()
     in_16_data = dict()
 
     for head in list_of_head:
+
         for what_attention_to_investigate in list_of_combinations:
             # options to investigate from:
             #   attn:  basic attention from self-attention paper without any pos encodings
@@ -288,11 +270,13 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                         unpadded_attention = numpy_attention[sentence_index]  # numpy_attention[sentence_index+50]
                     elif head == 2.0:
                         if len(numpy_attention) != 27:  # skip the last batch of size 27
-                            unpadded_attention = numpy_attention[sentence_index + 50]  # numpy_attention[sentence_index+50]
+                            unpadded_attention = numpy_attention[
+                                sentence_index + 50]  # numpy_attention[sentence_index+50]
                     elif head == 3.0:
                         # print(numpy_attention)
                         if len(numpy_attention) != 27:  # skip the last batch of size 27
-                            unpadded_attention = numpy_attention[sentence_index + 100]  # numpy_attention[sentence_index+50]
+                            unpadded_attention = numpy_attention[
+                                sentence_index + 100]  # numpy_attention[sentence_index+50]
 
                 # TODO: get rid of this later
                 # print(" ".join(unmapped_sentence))
@@ -366,7 +350,8 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                     print()
                     print("without padding")
                     print("smallest_mean:", smallest_mean)
-                    print("smallest_mean_word:", unmapped_sentence_final[smallest_mean_index], "index:", smallest_mean_index)
+                    print("smallest_mean_word:", unmapped_sentence_final[smallest_mean_index], "index:",
+                          smallest_mean_index)
                     print("^ av_mean:", all_means[smallest_mean_index], "av_std:", all_stds[smallest_mean_index])
                     print(
                         "highest attention score:", highest_attention_score_per_word[smallest_mean_index][1], "word:",
@@ -375,7 +360,8 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                     print()
 
                     print("biggest_mean:", biggest_mean)
-                    print("biggest_mean_word:", unmapped_sentence_final[biggest_mean_index], "index:", biggest_mean_index)
+                    print("biggest_mean_word:", unmapped_sentence_final[biggest_mean_index], "index:",
+                          biggest_mean_index)
                     print("^ av_mean:", all_means[biggest_mean_index], "av_std:", all_stds[biggest_mean_index])
                     print(
                         "highest attention score:", highest_attention_score_per_word[biggest_mean_index][1], "word:",
@@ -387,7 +373,8 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                     biggest_std_index, biggest_std = max(enumerate(all_stds), key=operator.itemgetter(1))
 
                     print("smallest_std:", smallest_std)
-                    print("smallest_std_word:", unmapped_sentence_final[smallest_std_index], "index:", smallest_std_index)
+                    print("smallest_std_word:", unmapped_sentence_final[smallest_std_index], "index:",
+                          smallest_std_index)
                     print("^ av_mean:", all_means[smallest_std_index], "av_std:", all_stds[smallest_std_index])
                     print(
                         "highest attention score:", highest_attention_score_per_word[smallest_std_index][1], "word:",
@@ -414,27 +401,57 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                             outfile.write(" ".join(["index:", str(i), " /// word:", str(element), "\n"]))
 
                             outfile.write(" ".join(
-                                ["Attention vector:", "[", ", ".join([str(x) for x in unpadded_attention[i]]), "]", "\n",
+                                ["Attention vector:", "[", ", ".join([str(x) for x in unpadded_attention[i]]), "]",
+                                 "\n",
                                  str(len(unpadded_attention)), "\n",
                                  "av_mean: ", str(all_means[i]), "av_str: ", str(all_stds[i]), "\n"]))
 
                             outfile.write(
-                                " ".join(["[", ", ".join([str(x) for x in softmax(current_word_pos_vector)]), "]", "\n"]))
+                                " ".join(
+                                    ["[", ", ".join([str(x) for x in softmax(current_word_pos_vector)]), "]", "\n"]))
+
+                            if what_attention_to_investigate == "attn":
+                                if head == 1.0:
+                                    whole_sentence_graph_dict[str(element)]["1"]["position"] = str(i)
+                                    whole_sentence_graph_dict[str(element)]["1"]["attn"] = unpadded_attention[i]
+                                elif head == 2.0:
+                                    whole_sentence_graph_dict[str(element)]["2"]["position"] = str(i)
+                                    whole_sentence_graph_dict[str(element)]["2"]["attn"] = unpadded_attention[i]
+                                elif head == 3.0:
+                                    whole_sentence_graph_dict[str(element)]["3"]["position"] = str(i)
+                                    whole_sentence_graph_dict[str(element)]["3"]["attn"] = unpadded_attention[i]
+                            elif what_attention_to_investigate == "attn_pos":
+                                if head == 1.0:
+                                    whole_sentence_graph_dict[str(element)]["1"]["attn_pos"] = unpadded_attention[i]
+                                elif head == 2.0:
+                                    whole_sentence_graph_dict[str(element)]["2"]["attn_pos"] = unpadded_attention[i]
+                                elif head == 3.0:
+                                    whole_sentence_graph_dict[str(element)]["3"]["attn_pos"] = unpadded_attention[i]
+                            elif what_attention_to_investigate == "combined":
+                                if head == 1.0:
+                                    whole_sentence_graph_dict[str(element)]["1"]["combined"] = unpadded_attention[i]
+                                elif head == 2.0:
+                                    whole_sentence_graph_dict[str(element)]["2"]["combined"] = unpadded_attention[i]
+                                elif head == 3.0:
+                                    whole_sentence_graph_dict[str(element)]["3"]["combined"] = unpadded_attention[i]
 
                         # outfile.write(" ".join([" ".join([str(x) for x in unpadded_attention]), "\n", str(len(unpadded_attention)), "\n"]))
 
                         outfile.write(
-                            " ".join([" ".join(unmapped_sentence_final), "\n", str(len(unmapped_sentence_final)), "\n"]))
+                            " ".join(
+                                [" ".join(unmapped_sentence_final), "\n", str(len(unmapped_sentence_final)), "\n"]))
                         outfile.write(" ".join(["without padding", "\n"]))
                         outfile.write(" ".join(["smallest_mean:", str(smallest_mean), "\n"]))
                         outfile.write(" ".join(
                             ["smallest_mean_word:", str(unmapped_sentence_final[smallest_mean_index]), " index:",
                              str(smallest_mean_index), "\n"]))
                         outfile.write(" ".join(
-                            ["^ av_mean:", str(all_means[smallest_mean_index]), "av_std:", str(all_stds[smallest_mean_index]),
+                            ["^ av_mean:", str(all_means[smallest_mean_index]), "av_std:",
+                             str(all_stds[smallest_mean_index]),
                              "\n"]))
                         outfile.write(" ".join([
-                            "highest attention score:", str(highest_attention_score_per_word[smallest_mean_index][1]), "word:",
+                            "highest attention score:", str(highest_attention_score_per_word[smallest_mean_index][1]),
+                            "word:",
                             str(unmapped_sentence_final[highest_attention_score_per_word[smallest_mean_index][0]]),
                             "index:", str(highest_attention_score_per_word[smallest_mean_index][0]), "\n", "\n"]))
 
@@ -463,8 +480,9 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                             "index:", str(highest_attention_score_per_word[smallest_std_index][0]), "\n", "\n"]))
 
                         outfile.write(" ".join(["biggest_std:", str(biggest_std), "\n"]))
-                        outfile.write(" ".join(["biggest_std_word:", str(unmapped_sentence_final[biggest_std_index]), " index:",
-                                                str(biggest_std_index), "\n"]))
+                        outfile.write(
+                            " ".join(["biggest_std_word:", str(unmapped_sentence_final[biggest_std_index]), " index:",
+                                      str(biggest_std_index), "\n"]))
                         outfile.write(" ".join(["^ av_mean:", str(all_means[biggest_std_index]), "av_std:",
                                                 str(all_stds[biggest_std_index]), "\n"]))
                         outfile.write(" ".join([
@@ -474,3 +492,6 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
                             "index:", str(highest_attention_score_per_word[biggest_std_index][0]), "\n", "\n"]))
 
                         outfile.write("\n")
+
+    # automatically generate plots
+    plot_generator_with_softmax(whole_sentence_graph_dict)
