@@ -157,3 +157,16 @@ per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
 per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  ```
  
+ ## Acknowledgement
+ 
+ The self-attention implementation in this project is mostly taken from (all modifications are explained in the paper linked above): 
+ [Attention is all you need: A Pytorch Implementation](https://github.com/jadore801120/attention-is-all-you-need-pytorch) 
+ (Related code licensed under [MIT License](https://github.com/jadore801120/attention-is-all-you-need-pytorch/blob/master/LICENSE)).
+ 
+ The original TACRED implementation is used as a base of this implementation (all modifications are explained in the 
+ paper linked above): [Position-aware Attention RNN Model for Relation Extraction](https://github.com/yuhaozhang/tacred-relation)
+  (Related code licensed under [Apache License, Version 2.0](https://github.com/yuhaozhang/tacred-relation/blob/master/LICENSE)).
+  
+## License
+
+All original code in this project is licensed under the Apache License, Version 2.0. See the included LICENSE file.
