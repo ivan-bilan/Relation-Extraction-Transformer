@@ -1,15 +1,23 @@
 Position-Aware Self-Attention for Relation Extraction
 =====================================================
 
-"Relation extraction using deep neural networks and self-attention"
-
+This project is the result of my Master's Thesis (supervised by
+ [Dr. Benjamin Roth](http://www.cis.uni-muenchen.de/personen/mitarbeiter/beroth/index.html)):
 ```
+"Relation extraction using deep neural networks and self-attention"
 The Center for Information and Language Processing (CIS)
 Ludwig Maximilian University of Munich
 Ivan Bilan
 ```
 
+The pre-print is available on arXiv (in collaboration with
+ [Dr. Benjamin Roth](http://www.cis.uni-muenchen.de/personen/mitarbeiter/beroth/index.html)):
+ 
 https://arxiv.org/abs/1807.03052
+
+Related presentation from PyData Berlin 2018:
+
+[Understanding and Applying Self-Attention for NLP - Ivan Bilan](https://www.youtube.com/watch?v=OYygPG4d9H0)
 
 ## Requirements
 
@@ -45,8 +53,9 @@ python prepare_vocab.py dataset/tacred dataset/vocab --glove_dir dataset/glove
 This will write vocabulary and word vectors as a numpy matrix into the dir `dataset/vocab`.
 
 
+# Project Usage
 
-## Training
+## 1. Training
 
 Train our final model with:
 ```
@@ -82,7 +91,7 @@ python runner.py --data_dir dataset/tacred --vocab_dir dataset/vocab --no_diagon
 
 Model checkpoints and logs will be saved to `./saved_models/00`.
 
-## Evaluation
+## 2. Evaluation
 
 Run evaluation on the test set with:
 ```
@@ -96,14 +105,14 @@ In our evaluation runs, we always evaluate the last epoch checkpoint, namely `--
 python eval.py --model_dir saved_models/00 --model checkpoint_epoch_60.pt
 ```
 
-## Ensemble
+## 3. Ensemble Training
 
 In order to run the ensembled model use: 
  ```
  bash ensemble.sh
  ```
 
-## Best results
+# Best results
 
 Results on the evaluation set:
 ```
@@ -157,7 +166,19 @@ per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
 per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  ```
  
- ## Acknowledgement
+ ## Attention Example
+ 
+Sample Sentence from TACRED: 
+ 
+ *They cited the case of __Agency for International Development__ (OBJECT) subcontractor __Alan Gross__ (SUBJECT),
+ who was working in Cuba on a tourist visa and possessed satellite communications equipment, who has been held in a 
+ maximum security prison since his arrest Dec 3.*
+ 
+ Attention distribution for the preposition **of** in the sentence above:
+![Attention Distribution](./experiments/attention_plot.png/?raw=true "Attention Distribution Example")
+ 
+ 
+ # Acknowledgement
  
  The self-attention implementation in this project is mostly taken from (all modifications are explained in the paper linked above): 
  [Attention is all you need: A Pytorch Implementation](https://github.com/jadore801120/attention-is-all-you-need-pytorch) 
@@ -167,6 +188,11 @@ per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  paper linked above): [Position-aware Attention RNN Model for Relation Extraction](https://github.com/yuhaozhang/tacred-relation)
   (Related code licensed under [Apache License, Version 2.0](https://github.com/yuhaozhang/tacred-relation/blob/master/LICENSE)).
   
-## License
+# License
 
 All original code in this project is licensed under the Apache License, Version 2.0. See the included LICENSE file.
+
+# TODOs
+
+* Improve and document attention visualization process
+* Add weighting functions as hyperparameter

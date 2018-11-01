@@ -1,5 +1,3 @@
-''' Define the Transformer model '''
-
 import math
 import copy
 import torch

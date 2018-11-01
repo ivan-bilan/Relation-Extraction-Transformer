@@ -57,7 +57,7 @@ parser.add_argument('--temper_value', type=float, default=0.5,
 
 parser.add_argument(
     '--word_dropout', type=float, default=0.06,  # 0.04
-    help='The rate at which randomly set a word to UNK.'
+    help='The rate at which we randomly set a word to UNK.'
 )
 
 parser.add_argument('--lstm_dropout', type=float, default=0.5, help='Input and RNN dropout rate.')
