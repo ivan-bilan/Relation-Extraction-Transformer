@@ -10,7 +10,7 @@ from torch.autograd import Variable
 from global_random_seed import RANDOM_SEED
 
 from data.loader import DataLoader
-from model.rnn import RelationModel
+from model.model_wrapper import RelationModel
 from utils import torch_utils, scorer, constant, helper
 from utils.vocab import Vocab
 
