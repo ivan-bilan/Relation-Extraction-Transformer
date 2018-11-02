@@ -27,7 +27,16 @@ Related presentation from PyData Berlin 2018:
 - CuDNN 7.005 (up to 7.1)
 
 # How to setup
-## 1. Dataset
+## 1. Python Environment
+
+To automatically create a conda environment (using Anaconda3) with Python 3.7 and Pytorch 1.0dev, run the following command:
+```bash
+make build_venv
+```
+
+Note: you have to have CUDA installed already before creating the environment.
+
+## 2. Dataset
 
 The TACRED dataset used for evaluation is currently not publicly available. Follow the original authors' GitHub page
 for more updates: https://github.com/yuhaozhang/tacred-relation
@@ -38,7 +47,7 @@ https://github.com/yuhaozhang/tacred-relation/tree/master/dataset/tacred
 For this implementation, we use the JSON format of the dataset which can be generated with the JSON generations
 script included in the dataset.
 
-## 2. Vocabulary preparation
+## 3. Vocabulary preparation
 
 First, download and unzip GloVe vectors from the Stanford website, with:
 ```
