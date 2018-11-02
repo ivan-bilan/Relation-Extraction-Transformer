@@ -196,3 +196,4 @@ All original code in this project is licensed under the Apache License, Version 
 
 * Improve and document attention visualization process
 * Add weighting functions as hyperparameter
+* Add tests
