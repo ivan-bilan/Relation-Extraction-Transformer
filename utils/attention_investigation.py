@@ -223,7 +223,6 @@ def investigate_attention(attn, attn_pos, sentence_words, outer_vocab):
 
                 # have to substract the index position from the mean
                 # TODO: in mean and std
-
                 average = np.average(values, weights=weights)
                 # Fast and numerically precise:
                 variance = np.average((values - average) ** 2, weights=weights)

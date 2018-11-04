@@ -95,7 +95,7 @@ class DataLoader(object):
             elif opt["use_lemmas"] and opt["preload_lemmas"]:
                 tokens = lemmatized_tokens[i]
 
-            # TODO: get max sequence length (within batch?)
+            # TODO: automatically get max sequence length (within batch?)
             # if max_sequence_length <= len(d['token']):
             #    max_sequence_length = len(d['token'])
 
@@ -105,6 +105,7 @@ class DataLoader(object):
                 tokens = [t.lower() for t in tokens]
 
             # anonymize tokens
+            # TODO: try without anonymizing the object and subject tokes
             ss, se = d['subj_start'], d['subj_end']
             os, oe = d['obj_start'], d['obj_end']
             tokens[ss:se + 1] = ['SUBJ-' + d['subj_type']] * (se - ss + 1)
@@ -158,6 +159,7 @@ class DataLoader(object):
                  inst_position, relation)
             ]
 
+        # TODO: currently the datasets size is used to pre-load the correct lemmatized set
         # pickle spacy lemmatized text
         if len(data) == 68124 and opt["use_lemmas"] and not opt["preload_lemmas"]:
             print("saving to pickle...")
@@ -210,15 +212,13 @@ class DataLoader(object):
         lens = [len(x) for x in batch[0]]
         batch, orig_idx = sort_all(batch, lens)
 
-        # word dropout
+        # handle word dropout
         if not self.eval:
-            # TODO: experiment with word dropouts!
             words = [word_dropout(sent, self.opt['word_dropout']) for sent in batch[0]]
         else:
             words = batch[0]
 
-        # TODO: get rid of using indexing to rely on the batch item types
-
+        # TODO: get rid of using indexing to rely on the batch item types (e.g. try the matchbox project)
         # get_long_tensor creates a matrix out of list of lists
         # convert to tensors
         words = get_long_tensor(words, batch_size)  # matrix of tokens

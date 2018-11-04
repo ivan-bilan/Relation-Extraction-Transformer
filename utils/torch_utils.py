@@ -122,6 +122,8 @@ class NAdam(Optimizer):
         http://cs229.stanford.edu/proj2015/054_report.pdf
     .. _On the importance of initialization and momentum in deep learning
         http://www.cs.toronto.edu/~fritz/absps/momentum.pdf
+
+    # TODO: find the original source of this code snippet to give proper credit
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
@@ -205,7 +207,9 @@ class NAdam(Optimizer):
 
 
 class NoamOpt:
-    "Optim wrapper that implements rate."
+    """
+    Optim wrapper that implements rate.
+    """
 
     def __init__(self, model_size, factor, warmup, optimizer):
         self.optimizer = optimizer
@@ -313,7 +317,7 @@ def keep_partial_grad(grad, topk):
     return grad
 
 
-### model IO
+# model IO
 def save(model, optimizer, opt, filename):
     params = {
         'model': model.state_dict(),
