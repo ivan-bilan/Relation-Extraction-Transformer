@@ -134,7 +134,6 @@ class DataLoader(object):
                 # do binning for subject positions
                 # subj_positions_orig = subj_positions
 
-                # TODO: select proper function to do this
                 subj_positions = self.bin_positions(subj_positions)
 
                 # subj_positions = self.bin_positions(subj_positions, 2)

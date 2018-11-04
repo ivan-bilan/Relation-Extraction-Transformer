@@ -40,8 +40,8 @@ class MultiHeadAttention(nn.Module):
         # self.dpa_qs = nn.Parameter(torch.FloatTensor(n_head, d_model*2, d_k).cuda())
         # init.constant(self.dpa_qs, 1)
 
-        # TODO: test this, initially dropout was always set to 0.1!
-        # TODO: higher makes the model stable, but Recall is now much lower!
+        # TODO: test this, initially dropout was always set to 0.1
+        # TODO: higher makes the model stable, but Recall is now much lower
         self.attention = ScaledDotProductAttention(d_model, scaled_dropout, temper_value)
 
         if self.use_batch_norm:  # batch norm
@@ -51,11 +51,11 @@ class MultiHeadAttention(nn.Module):
         else:  # layer norm
             self.layer_norm = nn.LayerNorm(d_model)
 
-        # TODO: try with , bias=False
+        # TODO: try with bias=False
         self.proj = Linear(n_head*d_v, d_model)  # , bias=False
         self.dropout = nn.Dropout(dropout)
 
-        # TODO: try # , nonlinearity='relu'
+        # TODO: try also nonlinearity='relu'
         init.kaiming_normal_(self.w_qs)  # xavier_normal used originally
         init.kaiming_normal_(self.w_ks)  # xavier_normal
         init.kaiming_normal_(self.w_vs)  # xavier_normal
@@ -97,7 +97,6 @@ class MultiHeadAttention(nn.Module):
             print("q_s after bmm:", q_s.size())
             print()
 
-        # TODO: set the same size to dpa as to the seq_input size
         if position_dpa is not None:
 
             verbose_sizes = False
@@ -118,7 +117,7 @@ class MultiHeadAttention(nn.Module):
             if verbose_sizes:
                 print("dpa after repeat 2 view:", position_dpa.size())
 
-            # do the last view
+            # do the last view, double the size of sentence positional embeddings here as well
             position_dpa = position_dpa.view(-1, len_q * 2 - 1, d_k)  # (n_head*batch_size) x len_q x d_k
 
             if verbose_sizes:
@@ -130,8 +129,6 @@ class MultiHeadAttention(nn.Module):
             if position_dpa is not None:
 
                 # print("using diagonal positional encodings 1")
-
-                # TODO: the size of dpa changes before this! investigate!
                 # print("q_s before scaled_attn:", q_s.size())
                 # print("dpa before scaled_attn:", position_dpa.size())
 
@@ -153,7 +150,7 @@ class MultiHeadAttention(nn.Module):
         outputs = torch.cat(torch.split(outputs, mb_size, dim=0), dim=-1)
 
         # project back to residual size
-        # TODO: some people suggest to use bias=False when projecting!
+        # TODO: some implementations suggest using bias=False when projecting
         outputs = self.proj(outputs)
         outputs = self.dropout(outputs)
 
@@ -164,8 +161,8 @@ class MultiHeadAttention(nn.Module):
             # have to make everything contiguous to make it run on CUDA
             if self.residual_bool:  # if new residual, add it only in PFF later
                 outputs = self.layer_norm(outputs.contiguous())
-            else:  # use typical self-attention implementation
-                # TODO: make sure this actually works as it should
+            else:  # use typical self-attention implementation with residual in between
+                # TODO: confirm this works as expected
                 outputs = self.layer_norm(outputs.contiguous() + residual.permute(0, 2, 1).contiguous())
 
             # move columns back

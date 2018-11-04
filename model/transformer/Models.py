@@ -215,7 +215,7 @@ class Encoder(nn.Module):
         # enc_input = self.src_word_emb(src_seq)
 
         # TODO: try adding vectors (word vec + pos vec) instead of just appending them
-        # TODO: try experimenting with character-based embeddings?
+        # TODO: try experimenting with character-based embeddings like fastText
 
         # add positional encoding to the initial input, add emd_vec+pos_vec value by value
         # originally we used the positional vector of the sentence from 0 to n+1

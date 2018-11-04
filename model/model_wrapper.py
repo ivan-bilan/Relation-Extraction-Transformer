@@ -315,7 +315,7 @@ class PositionAwareRNN(nn.Module):
                 opt=opt
             )
 
-            # TODO: does this work with relative positions?
+            # TODO: does this work with relative positions properly?
             self.pe_emb = nn.Embedding(constant.MAX_LEN * 2 + 1, opt['pe_dim'])
 
         self.opt = opt

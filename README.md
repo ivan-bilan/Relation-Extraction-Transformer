@@ -123,14 +123,15 @@ In order to run the ensembled model use:
 
 # Best results
 
-Results on the evaluation set:
-```
-Precision (micro): 65.386%
-   Recall (micro): 68.060%
-       F1 (micro): 66.696%
-```
+Results comparison on evaluation set (single model):
 
-Per-relation statistics:
+| Evaluation Metric         | Our approach           | Zhang et al. 2017  |
+| ------------- |:-------------:| -----:|
+| Precision (micro)      | 65.4% | **65.7%** |
+| Recall (micro)      | **68.0%**      |   64.5% |
+| F1 (micro) | **66.7%**      |    65.1% |
+
+Per-relation statistics (single model):
  ```
 org:alternate_names                  P:  74.78%  R:  80.75%  F1:  77.65%  #: 213
 org:city_of_headquarters             P:  71.59%  R:  76.83%  F1:  74.12%  #: 82
@@ -206,3 +207,4 @@ All original code in this project is licensed under the Apache License, Version 
 * Improve and document attention visualization process
 * Add weighting functions as hyperparameter
 * Add tests
+* Currently the project is hard-coded to work on a GPU, add CPU support

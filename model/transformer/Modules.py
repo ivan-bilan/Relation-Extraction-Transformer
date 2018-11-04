@@ -163,7 +163,7 @@ class ScaledDotProductAttention(nn.Module):
             attn = scale * self.tanh(attn / scale)
 
         elif WEIGHT_FUNCTION_MODE == 'concat':
-            # TODO: add paper for reference
+            # Paper for reference: https://arxiv.org/abs/1711.07971
             a = q
             b = k
             bs, s, val = a.size()
