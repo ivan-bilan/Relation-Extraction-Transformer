@@ -176,7 +176,60 @@ per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
 per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  ```
  
- ## Attention Example
+## Overview of Available Hyperparameters
+
+| **General Hyperparameters**      | | |
+|-------------:| -----:| -----:|
+| **Argument Name**           | **Default Value**  | **Description** |
+| `--emb_dim`     |   `300` | Word embeddings dimension size | 
+| `--word_dropout`     |   `0.06` | The rate at which we randomly set a word to `UNK` | 
+| `--lower / --no-lower`     |   `True` | Lowercase all words | 
+| `--weight_no_rel`     |   `1.0` | Weight for `no_relation` class | 
+| `--weight_rest`     |   `1.0` | Weight for other classes but `no_relation`  | 
+| `--lr`     |   `0.1` | Learning rate (Applies to SGD and Adagrad only)  | 
+| `--lr_decay`     |   `0.9` | Learning rate decay  | 
+| `--decay_epoch`     |   `15` | Start learning rate decay from given epoch  | 
+| `--max_grad_norm`     |   `1.0` | Gradient clipping value  | 
+| `--optim`     |   `sgd` | Optimizer, available options: `sgd, asgd, adagrad, adam, nadam, noopt_adam, openai_adam, adamax`  | 
+| `--num_epoch`     |   `70` | Number of epochs | 
+| `--batch_size`     |   `50` | Batch size  | 
+| `--topn`     |   `1e10` | Only finetune top N embeddings  | 
+| `--log_step`     |   `400` | Print log every k steps  | 
+| `--log`     |   `logs.txt` | Write training log to specified file  | 
+| `--save_epoch`     |   `1` | Save model checkpoints every k epochs  | 
+| `--save_dir`     |   `./saved_models` | Root dir for saving models  | 
+| **Position-aware Attention Layer**      | | |
+| `--ner_dim`     |   `30` | NER embedding dimension  |
+| `--pos_dim`     |   `30` | POS embedding dimension  |
+| `--pe_dim`     |   `30` | Position encoding dimension in the attention layer  |
+| `--attn_dim`     |   `200` | Attention size in the attention layer |
+| `--query_size_attn`     |   `360` | Embedding for query size in the positional attention  |
+| `--attn / --no-attn`     |   `True` | Use the position-aware attention layer  |
+| **Position-aware Attention LSTM Layer**      | | |
+| `--hidden_dim`     |   `360` | LSTM hidden state size  |
+| `--num_layers`     |   `2` | Number of LSTM layers |
+| `--lstm_dropout`     |   `0.5` | LSTM dropout rate |
+| `--self_att_and_rnn / --no_self_att_and_rnn`     |   `False` | Use LSTM layer with the Self-attention layer |
+| **Self-attention**      | | |
+| `--num_layers_encoder`     |   `1` | Number of self-attention encoders |
+| `--n_head`     |   `3` | Number of self-attention heads |
+| `--dropout`     |   `0.4` | Input and attention dropout rate |
+| `--scaled_dropout`     |   `0.1` | `ScaledDotProduct` Attention dropout |
+| `--temper_value`     |   `0.5` | Temper value for `ScaledDotProduct` Attention |
+| `--use_batch_norm`     |   `True` | Use BatchNorm in Self-attention |
+| `--use_layer_norm`     |   `False` | Use LayerNorm in Self-attention |
+| `--new_residual`     |   `True` | Use a different residual connection structure than in the original Self-attention |
+| `--old_residual`     |   `False` | Use the original residual connections in Self-attention |
+| `--obj_sub_pos`     |   `True` | In self-attention add object and subject positional vectors |
+| `--relative_positions / --no_relative_positions`     |   `True` | Bin the relative positional encodings |
+| `--diagonal_positional_attention / --no_diagonal_positional_attention`     |   `True` | Use relative positional encodings as described in our paper |
+| `--self-attn / --no_self_att`     |   `True` | Use the Self-attention encoder |
+| **Lemmatize input**      | | |
+| `--use_lemmas / no_lemmas`     |   `False` | Instead of raw text, use spaCy to lemmatize the sentences |
+| `--preload_lemmas / --no_preload_lemmas`     |   `False` | Preload lemmatized input as pickles |
+
+
+## Attention Example
  
 Sample Sentence from TACRED: 
  
