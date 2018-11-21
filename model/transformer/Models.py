@@ -34,6 +34,7 @@ class PositionalEncoding(nn.Module):
     Implement the PE function.
     """
 
+    # TODO: not supported on PyTorch 1.0dev
     def __init__(self, d_model, dropout, max_len=96):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
@@ -150,7 +151,8 @@ class Encoder(nn.Module):
             self.position_enc3 = nn.Embedding(n_position, d_word_vec, padding_idx=PAD)
             self.position_enc3.weight.data = position_encoding_init(n_position, d_word_vec)
 
-            self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
+            # TODO: not supported on PyTorch 1.0dev
+            # self.positions_enc4 = PositionalEncoding(d_model, 0.1, 96)
 
         elif self.diagonal_positional_attention:
             # needs a positional matrix double the size of embeddings

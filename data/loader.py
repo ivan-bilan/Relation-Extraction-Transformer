@@ -1,6 +1,4 @@
-import re
 import json
-import math
 import pickle
 import random
 import torch
@@ -122,8 +120,39 @@ class DataLoader(object):
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
             # print("inst_position", inst_position)
 
+            # original approach to relativate the positional indices
             # double the amount of positional embeddings for the diagonal positional attention
+            """
+                Example:
+                    original: 
+                        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+                    relativated non-binned:
+                        [-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+                    relativated binned:
+                        [-4, -3, -3, -3, -3, -2, -2, -1, 0, 1, 2, 2, 3, 3, 3, 3, 4]
+            """
+
             relative_positions = self.bin_positions(get_position_modified(l - 1, l - 1, l * 2 - 1))
+
+            debug_relative_positions = False
+            # show how the positional indices are generated
+            if debug_relative_positions:
+                print(inst_position)
+                print("1:  ", relative_positions, len(relative_positions))
+                print("2:  ", get_position_modified(l - 1, l - 1, l * 2 - 1), len(get_position_modified(l - 1, l - 1, l * 2 - 1)))
+
+                # another approach to relativate the positional indeces
+                # TODO: this doesn't seem to work correctly, use the original approach
+                MAX_LENGTH = 96  # should reset to 96 everywhere?
+                # binned
+                # relative_positions = self.bin_positions(
+                #     torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long))
+                # non-binned
+                relative_positions = torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long)
+                print("3:  ", relative_positions, len(relative_positions))
+                print("4:  ", self.bin_positions(torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long)),
+                      len(self.bin_positions(torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long))))
+                print()
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
@@ -174,7 +203,8 @@ class DataLoader(object):
 
         return processed
 
-    def bin_positions(self, positions_list):
+    @staticmethod
+    def bin_positions(positions_list):
         """
         Recalculate the word positions by binning them:
         e.g. input = [-3 -2 -1  0  1  2  3  4  5  6  7]
@@ -238,7 +268,8 @@ class DataLoader(object):
         masks = torch.eq(words, 0)  # should we also do +src_pos?
         rels = torch.LongTensor(batch[8])  # list of relation labels for this batch
 
-        return (words, masks, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single, src_pos, rels, orig_idx)
+        return (
+        words, masks, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single, src_pos, rels, orig_idx)
 
     def __iter__(self):
         for i in range(self.__len__()):

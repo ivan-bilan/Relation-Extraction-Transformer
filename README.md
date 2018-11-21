@@ -1,6 +1,8 @@
 Position-Aware Self-Attention for Relation Extraction
 =====================================================
 
+WORK IN PROGRESS! Ideas, bug-fixes and constructive criticism are all welcome.
+
 This project is the result of my Master's Thesis (supervised by
  [Dr. Benjamin Roth](http://www.cis.uni-muenchen.de/personen/mitarbeiter/beroth/index.html)):
 ```
@@ -23,7 +25,7 @@ Related presentation from PyData Berlin 2018:
 
 - Python 3.6+
 - PyTorch 0.4.1+ (including 1.0dev)
-- CUDA 9.0+ (including CUDA 10)
+- CUDA 9.0+ (including CUDA 10 if you build PyTorch from source, not compatible with CuDNN <7.2)
 - CuDNN 7.005 (up to 7.1)
 
 # How to setup
@@ -176,6 +178,8 @@ per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
 per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  ```
  
+If you can't replicate the results on the master branch, run `pytorch_0_4_1_wip_version_2` using PyTorch 0.4.1.
+
 ## Overview of Available Hyperparameters
 
 | **General Hyperparameters**      | | |
@@ -193,7 +197,7 @@ per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
 | `--optim`     |   `sgd` | Optimizer, available options: `sgd, asgd, adagrad, adam, nadam, noopt_adam, openai_adam, adamax`  | 
 | `--num_epoch`     |   `70` | Number of epochs | 
 | `--batch_size`     |   `50` | Batch size  | 
-| `--topn`     |   `1e10` | Only finetune top N embeddings  | 
+| `--topn`     |   `1e10` | Only fine-tune top N embeddings  | 
 | `--log_step`     |   `400` | Print log every k steps  | 
 | `--log`     |   `logs.txt` | Write training log to specified file  | 
 | `--save_epoch`     |   `1` | Save model checkpoints every k epochs  | 
@@ -214,6 +218,7 @@ per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
 | `--num_layers_encoder`     |   `1` | Number of self-attention encoders |
 | `--n_head`     |   `3` | Number of self-attention heads |
 | `--dropout`     |   `0.4` | Input and attention dropout rate |
+| `--hidden_self`     |   `130` | Encoder layer width |
 | `--scaled_dropout`     |   `0.1` | `ScaledDotProduct` Attention dropout |
 | `--temper_value`     |   `0.5` | Temper value for `ScaledDotProduct` Attention |
 | `--use_batch_norm`     |   `True` | Use BatchNorm in Self-attention |

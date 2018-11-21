@@ -118,6 +118,7 @@ class MultiHeadAttention(nn.Module):
                 print("dpa after repeat 2 view:", position_dpa.size())
 
             # do the last view, double the size of sentence positional embeddings here as well
+            # TODO: investigate if sizes are correct here
             position_dpa = position_dpa.view(-1, len_q * 2 - 1, d_k)  # (n_head*batch_size) x len_q x d_k
 
             if verbose_sizes:
