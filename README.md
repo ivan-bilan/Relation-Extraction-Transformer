@@ -23,10 +23,10 @@ Related presentation from PyData Berlin 2018:
 
 ## Requirements
 
-- Python 3.6+
-- PyTorch 0.4.1+ (including 1.0dev)
-- CUDA 9.0+ (including CUDA 10 if you build PyTorch from source, not compatible with CuDNN <7.2)
-- CuDNN 7.005 (up to 7.1)
+- Python 3.5+
+- PyTorch 1.0
+- CUDA 10.0 (or 9.0+)
+- CuDNN 7.4 (or 7.1+)
 
 # How to setup
 ## 1. Python Environment
@@ -266,3 +266,4 @@ All original code in this project is licensed under the Apache License, Version 
 * Add weighting functions as hyperparameter
 * Add tests
 * Currently the project is hard-coded to work on a GPU, add CPU support
+* Do more experiments with the Adam optimizer (i.e. lr=0.0001)

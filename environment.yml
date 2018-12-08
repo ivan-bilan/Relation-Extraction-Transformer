@@ -4,4 +4,4 @@ channels:
   - defaults
 dependencies:
   - pip=10.0.1=py37_0
-  - python=3.7.0
+  - python=3.5.0

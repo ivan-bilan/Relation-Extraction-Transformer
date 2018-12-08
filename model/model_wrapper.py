@@ -390,7 +390,7 @@ class PositionAwareRNN(nn.Module):
         # input_size = len(words)
 
         # TODO: find best number to add?
-        modified_pos_vec = modified_pos_vec + 96
+        # modified_pos_vec = modified_pos_vec + 96
         # print(modified_pos_vec)
 
         if self.opt["self_att"] is True:

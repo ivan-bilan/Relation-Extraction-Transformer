@@ -131,8 +131,16 @@ class DataLoader(object):
                     relativated binned:
                         [-4, -3, -3, -3, -3, -2, -2, -1, 0, 1, 2, 2, 3, 3, 3, 3, 4]
             """
+            # approach 1
+            # relative_positions = self.bin_positions(get_position_modified(l - 1, l - 1, l * 2 - 1))
 
-            relative_positions = self.bin_positions(get_position_modified(l - 1, l - 1, l * 2 - 1))
+            # TODO: check if this actually helps, or whether it's covered by adding 96 to each element
+            # since we use 0 as a Padding symbol, let's replace 0 with some arbitrary number
+            # relative_positions = [1 if x == 0 else x for x in relative_positions]
+
+            # approach 2
+            MAX_LENGTH = 96
+            relative_positions = torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long)
 
             debug_relative_positions = False
             # show how the positional indices are generated
@@ -141,8 +149,8 @@ class DataLoader(object):
                 print("1:  ", relative_positions, len(relative_positions))
                 print("2:  ", get_position_modified(l - 1, l - 1, l * 2 - 1), len(get_position_modified(l - 1, l - 1, l * 2 - 1)))
 
-                # another approach to relativate the positional indeces
-                # TODO: this doesn't seem to work correctly, use the original approach
+                # another approach to relativate the positional indices
+                # TODO: if using this approach, don't add 96 to each pos index later on
                 MAX_LENGTH = 96  # should reset to 96 everywhere?
                 # binned
                 # relative_positions = self.bin_positions(

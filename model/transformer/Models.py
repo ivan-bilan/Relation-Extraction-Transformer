@@ -250,8 +250,9 @@ class Encoder(nn.Module):
             # pe_features[0] --> subject positions
             # pe_features[1] --> object positions
             # pe_features[2] --> sentence positions doubled
+            src_seq += self.position_enc(src_pos)
             src_seq = src_seq + self.position_enc2(pe_features[1])  # + self.position_enc3(pe_features[0])
-            # src_seq += self.position_enc2(pe_features[0])
+            src_seq += self.position_enc2(pe_features[0])
 
             verbose_sizes = False
 

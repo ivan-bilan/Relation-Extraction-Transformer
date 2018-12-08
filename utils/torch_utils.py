@@ -284,7 +284,7 @@ def get_optimizer(name, parameters, lr):
     elif name == "noopt_adam":
         # this comes from http://nlp.seas.harvard.edu/2018/04/03/attention.html
         # but with a modification of using a zero_grad function in the class
-        return NoamOpt(360, 1, 400, torch.optim.Adam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9))
+        return NoamOpt(360, 1, 200, torch.optim.Adam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9))
     else:
         raise Exception("Unsupported optimizer: {}".format(name))
 
