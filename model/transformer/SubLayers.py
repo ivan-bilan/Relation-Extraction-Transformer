@@ -72,7 +72,7 @@ class MultiHeadAttention(nn.Module):
         nn.init.xavier_normal_(self.fc.weight)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, q, k, v, attn_mask=None, position_dpa_vector=None):
+    def forward(self, q, k, v, attn_mask=None, position_dpa_vector=None, sentence_words=None):
 
         d_k, d_v = self.d_k, self.d_v
         n_head = self.n_head
@@ -104,7 +104,8 @@ class MultiHeadAttention(nn.Module):
                 attn_mask = attn_mask.repeat(n_head, 1, 1)  # (n*b) x .. x ..
                 output, attns = self.attention(q, k, v,
                     attn_mask=attn_mask,
-                    position_dpa=position_dpa_vector
+                    position_dpa=position_dpa_vector,
+                    sentence_words=sentence_words
                 )
             else:
                 attn_mask = attn_mask.repeat(n_head, 1, 1)  # (n*b) x .. x ..

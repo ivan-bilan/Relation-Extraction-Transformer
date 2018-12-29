@@ -1,11 +1,4 @@
-"""
-Data loader for TACRED json files.
-"""
-
-
-import re
 import json
-import math
 import pickle
 import random
 import torch
@@ -15,6 +8,12 @@ from tqdm import tqdm
 
 from utils import constant, helper, vocab
 from global_random_seed import RANDOM_SEED
+from utils.extract_lemmas import extract_lemmas
+
+"""
+Data loader for TACRED json files.
+"""
+
 PAD = 0
 ABS_MAX_LEN = 96
 
@@ -61,7 +60,7 @@ class DataLoader(object):
         self.num_examples = len(data)
 
         # chunk into batches
-        data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
+        data = [data[i:i + batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
 
         print("{} batches created for {}".format(len(data), filename))
@@ -89,12 +88,12 @@ class DataLoader(object):
 
             tokens = d['token']
             if opt["use_lemmas"] and not opt["preload_lemmas"]:
-                tokens = self.extract_lemmas(tokens, i)
+                tokens = extract_lemmas(self.nlp, tokens, i)
                 lemmatized_tokens.append(tokens)
             elif opt["use_lemmas"] and opt["preload_lemmas"]:
                 tokens = lemmatized_tokens[i]
 
-            # get max sequence length
+            # TODO: automatically get max sequence length (within batch?)
             # if max_sequence_length <= len(d['token']):
             #    max_sequence_length = len(d['token'])
 
@@ -103,13 +102,12 @@ class DataLoader(object):
                 # print("LOWERIN")
                 tokens = [t.lower() for t in tokens]
 
-            # TODO: save lemmas list as pickle and load it before the for loop
-
             # anonymize tokens
+            # TODO: try without anonymizing the object and subject tokes
             ss, se = d['subj_start'], d['subj_end']
             os, oe = d['obj_start'], d['obj_end']
-            tokens[ss:se+1] = ['SUBJ-'+d['subj_type']] * (se-ss+1)
-            tokens[os:oe+1] = ['OBJ-'+d['obj_type']] * (oe-os+1)
+            tokens[ss:se + 1] = ['SUBJ-' + d['subj_type']] * (se - ss + 1)
+            tokens[os:oe + 1] = ['OBJ-' + d['obj_type']] * (oe - os + 1)
 
             tokens = map_to_ids(tokens, vocab.word2id)
 
@@ -120,11 +118,49 @@ class DataLoader(object):
 
             # create word positional vector for self-attention
             inst_position = list([pos_i + 1 if w_i != PAD else 0 for pos_i, w_i in enumerate(tokens)])
+            # print("inst_position", inst_position)
 
-            # this is positional embedding for self-attention without binning
-            # relative_positions = get_position_modified(int((l/2))-1, int((l/2))-1, l*2)
-            # with binning
-            relative_positions = self.bin_positions(get_position_modified(int((l/2))-1, int((l/2))-1, l*2))
+            # original approach to relativate the positional indices
+            # double the amount of positional embeddings for the diagonal positional attention
+            """
+                Example:
+                    original: 
+                        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+                    relativated non-binned:
+                        [-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8]
+                    relativated binned:
+                        [-4, -3, -3, -3, -3, -2, -2, -1, 0, 1, 2, 2, 3, 3, 3, 3, 4]
+            """
+            # approach 1
+            # relative_positions = self.bin_positions(get_position_modified(l - 1, l - 1, l * 2 - 1))
+
+            # TODO: check if this actually helps, or whether it's covered by adding 96 to each element
+            # since we use 0 as a Padding symbol, let's replace 0 with some arbitrary number
+            # relative_positions = [1 if x == 0 else x for x in relative_positions]
+
+            # approach 2
+            MAX_LENGTH = 96
+            relative_positions = torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long)
+
+            debug_relative_positions = False
+            # show how the positional indices are generated
+            if debug_relative_positions:
+                print(inst_position)
+                print("1:  ", relative_positions, len(relative_positions))
+                print("2:  ", get_position_modified(l - 1, l - 1, l * 2 - 1), len(get_position_modified(l - 1, l - 1, l * 2 - 1)))
+
+                # another approach to relativate the positional indices
+                # TODO: if using this approach, don't add 96 to each pos index later on
+                MAX_LENGTH = 96  # should reset to 96 everywhere?
+                # binned
+                # relative_positions = self.bin_positions(
+                #     torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long))
+                # non-binned
+                relative_positions = torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long)
+                print("3:  ", relative_positions, len(relative_positions))
+                print("4:  ", self.bin_positions(torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long)),
+                      len(self.bin_positions(torch.tensor(range(MAX_LENGTH - l, MAX_LENGTH + l - 1), dtype=torch.long))))
+                print()
 
             # position relative to Subject and Object are calculated here
             subj_positions = get_positions(d['subj_start'], d['subj_end'], l)
@@ -132,20 +168,18 @@ class DataLoader(object):
 
             # pass relative positional vectors
             if opt["relative_positions"]:
-
                 # print(subj_positions)
                 # do binning for subject positions
                 # subj_positions_orig = subj_positions
 
-                # TODO: fix arguments for this
-                subj_positions = self.relativate_word_positions(subj_positions)
+                subj_positions = self.bin_positions(subj_positions)
 
                 # subj_positions = self.bin_positions(subj_positions, 2)
                 # do binning for object positions
                 # print(obj_positions)
 
                 # obj_positions_orig = obj_positions
-                obj_positions = self.relativate_word_positions(obj_positions)
+                obj_positions = self.bin_positions(obj_positions)
 
                 # obj_positions = self.bin_positions(obj_positions, 2)
                 # print(obj_positions)
@@ -153,12 +187,16 @@ class DataLoader(object):
             # one-hot encoding for relation classes
             relation = constant.LABEL_TO_ID[d['relation']]
 
+            # print("inst_position", inst_position, type(inst_position), inst_position)
+            # print("subj_positions", subj_positions, type(subj_positions), subj_positions)
+
             # return vector of the whole partitioned data
             processed += [
                 (tokens, pos, ner, deprel, subj_positions, obj_positions, relative_positions,
-                           inst_position, relation)
-                          ]
+                 inst_position, relation)
+            ]
 
+        # TODO: currently the datasets size is used to pre-load the correct lemmatized set
         # pickle spacy lemmatized text
         if len(data) == 68124 and opt["use_lemmas"] and not opt["preload_lemmas"]:
             print("saving to pickle...")
@@ -173,175 +211,21 @@ class DataLoader(object):
 
         return processed
 
-    def relativate_word_positions(self, positions_list, dpa=None):
+    @staticmethod
+    def bin_positions(positions_list):
         """
-        Recalculate the word positions by decreasing their relativity based on the distance to
-        query or object:
-        e.g. input=[0,1,2,3,4,5,5,6] --> output=[0,1,2,3,3,4,4,4]
-
-        :param positions_list: list of word positions relative to the query or object
-        :return: new positions
-        """
-
-        new_list = [math.ceil(math.log(abs(x)+1, 2)) for x in positions_list]
-        new_list_final = list()
-
-        # reverse positives
-        for index, element in enumerate(new_list):
-            if element == 0:
-                new_list_final.extend(new_list[index:])
-                break
-            else:
-                new_element = -element
-                new_list_final.append(new_element)
-
-        # report an error if the length of the sentence and positional encoding doesn't match
-        if len(positions_list) != len(new_list_final):
-            print("Error in positional embeddings!")
-
-        # TODO: how to implement dpa???
-        # try the dpa trick by doubling the position vector
-        if dpa:
-            return new_list_final + new_list_final
-        else:
-            return new_list_final
-
-    def bin_positions(self, positions_list):
-        """
-        Recalculate the word positions binning them given a binning distance:
+        Recalculate the word positions by binning them:
         e.g. input = [-3 -2 -1  0  1  2  3  4  5  6  7]
               --> output=[-2 -2 -1  0  1  2  2  3  3  3  3]
 
-        # this was one of the other ideas we tried, but it is not used anywhere,
-        # instead we use the relative word positions function above.
-
         :param positions_list: list of word positions relative to the query or object
-        :param width: ignored
         :return: new positions
         """
 
         a = np.array(positions_list)
-        a[a>0] = np.floor(np.log2(a[a>0])) + 1
-        a[a<0] = -np.floor(np.log2(-a[a<0])) - 1
+        a[a > 0] = np.floor(np.log2(a[a > 0])) + 1
+        a[a < 0] = -np.floor(np.log2(-a[a < 0])) - 1
         return a.tolist()
-
-    def extract_lemmas(self, tokens, i):
-        init_tokens = tokens
-        # if lemma
-        # use lemmas instead of raw text
-        tokens_1_len = len(tokens)
-        # print(len(tokens))
-        # print(tokens)
-
-        tokens = u' '.join(tokens)
-        # do this twice
-        tokens = re.sub(r"(\w),?\.?-(\w)", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r"(\w),(\w)", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r"(\w)-+(\w)", "\g<1>_\g<2>", tokens)
-        # tokens = re.sub(r"(\w)/(\w)", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r"(\w)/(\w)/?(\w){,3}?/?(\w){,3}?", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r"(\w)\.+([\w@])", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r" '(\w)", " \g<1>", tokens)
-        tokens = re.sub(r" '(\d)", " \g<1>", tokens)  # ?
-        tokens = re.sub(r" \+(\d)", " \g<1>", tokens)
-        tokens = re.sub(r" ,(\w)", " \g<1>", tokens)
-        tokens = re.sub(r" ,(\d)", "\g<1>", tokens)
-        # tokens = re.sub(r" :(\w)", " \g<1>", tokens)
-        tokens = re.sub(r" [:#]([\d\w-])", " \g<1>", tokens)
-        tokens = re.sub(r"^[:#]([\d\w-])", "\g<1>", tokens)
-
-        tokens = re.sub(r"(\w)[:!?=](\w)", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r"(\w)[:!?=]([A-Z])", "\g<1>_\g<2>", tokens)
-        # tokens = re.sub(r"(\w)=(\w)", "\g<1>_\g<2>", tokens)
-
-        tokens = re.sub(r" <(\w)", " \g<1>", tokens)
-        tokens = re.sub(r"([\w\d])[>!?\]] ?", "\g<1> ", tokens)
-
-        tokens = re.sub(r"(\w)&(\w)", "\g<1>_\g<2>", tokens)
-        tokens = re.sub(r"([\w\d])& ", "\g<1> ", tokens)
-
-        tokens = re.sub(r"(\w)\.", "\g<1>", tokens)
-        tokens = re.sub(r"(\w)\* ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)'", "\g<1>", tokens)
-        tokens = re.sub(r"(\w): ", "\g<1> ", tokens)
-        tokens = re.sub(r"([\w\.]); ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)_ ", "\g<1> ", tokens)
-
-        # ;P
-        tokens = re.sub(r" ;([\d\w-])", " \g<1>", tokens)
-
-        # normalize thousands
-        tokens = re.sub(r"(\d+)K ", "\g<1>.000 ", tokens)
-        tokens = re.sub(r"(\d+)[A-Za-z][A-Za-z]? ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\d+)[A-Za-z][A-Za-z]?$", "\g<1> ", tokens)
-        tokens = re.sub(r"(\d+)m+ ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\d+)pm ", "\g<1> ", tokens)
-
-        # trickery TODO: fix this!
-        tokens = re.sub(r" [Ww]ed\.? ", " wedding ", tokens)
-        tokens = re.sub(r" (couldnt|wouldnt) ", " would ", tokens)
-        tokens = re.sub(r" wont ", " will ", tokens)
-        tokens = re.sub(r" cant ", " can ", tokens)
-        tokens = re.sub(r" didnt ", " did ", tokens)
-        tokens = re.sub(r" thats ", " that ", tokens)
-        tokens = re.sub(r"^thats ", "that ", tokens)
-        tokens = re.sub(r" shes ", " she ", tokens)
-        tokens = re.sub(r" hes ", " he ", tokens)
-        tokens = re.sub(r" whats ", " what ", tokens)
-        tokens = re.sub(r" wasnt ", " was ", tokens)
-        tokens = re.sub(r" whos ", " who ", tokens)
-        tokens = re.sub(r" shouldnt ", " should ", tokens)
-        tokens = re.sub(r" theres ", " there ", tokens)
-        tokens = re.sub(r" isnt ", " is ", tokens)
-        tokens = re.sub(r" werent ", " were ", tokens)
-
-        # TODO: ask about this on stackoverflow?
-        tokens = re.sub(r" dont ", " do ", tokens)
-        tokens = re.sub(r" doesnt ", " does ", tokens)
-
-        tokens = re.sub(r"Cant ", "Can ", tokens)
-        tokens = re.sub(r"Hes ", "He ", tokens)
-        tokens = re.sub(r"Thats ", "That ", tokens)
-
-        tokens = re.sub(r" Hed ", " He ", tokens)
-        tokens = re.sub(r" [Ii]m ", " I ", tokens)
-        tokens = re.sub(r"^[Ii]m ", "I ", tokens)
-        # tokens = re.sub(r'[\?\!]+', '.', tokens)
-
-        tokens = re.sub(r'([\!\?\*\_\=\.\#\']){1,}', '\g<1>', tokens)
-        tokens = re.sub(r"(\w)\. ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)\# ", "\g<1> ", tokens)
-        tokens = re.sub(r"(\w)=(\w)", "\g<1>_\g<2>", tokens)
-
-        # TODO: normalize URLs amd emails?
-        # tokens = re.sub(r'\?{1,}', '?', tokens)
-
-        tokens = self.nlp(tokens)
-
-        # TODO: leave pronouns back in
-        # TODO: make it lower too
-        tokens = [tok.lemma_.lower().strip() if tok.lemma_ != "-PRON-" else tok.lower_ for tok in tokens]
-        # [token.lemma_ for token in tokens]
-
-        if tokens_1_len != len(tokens):
-
-            print("Current sentence index:", i)
-            print(tokens_1_len, len(tokens))
-            print(init_tokens)
-            print(tokens)
-
-            for i, element in enumerate(init_tokens):
-                if init_tokens[i] != tokens[i]:
-                    print("token:", init_tokens[i])
-                    print("posL", i)
-
-        # TODO: if assertion fails, fall back to the original sentence!!!
-        assert tokens_1_len == len(tokens)
-
-        return tokens
 
     def gold(self):
         """ Return gold labels as a list. """
@@ -366,34 +250,34 @@ class DataLoader(object):
         lens = [len(x) for x in batch[0]]
         batch, orig_idx = sort_all(batch, lens)
 
-        # word dropout
+        # handle word dropout
         if not self.eval:
-            # TODO: experiment with word dropouts!
             words = [word_dropout(sent, self.opt['word_dropout']) for sent in batch[0]]
         else:
             words = batch[0]
 
+        # TODO: get rid of using indexing to rely on the batch item types (e.g. try the matchbox project)
         # get_long_tensor creates a matrix out of list of lists
-
         # convert to tensors
-        words = get_long_tensor(words, batch_size)              # matrix of tokens
-        pos = get_long_tensor(batch[1], batch_size)             # matrix of part of speech embeddings
-        ner = get_long_tensor(batch[2], batch_size)             # matrix for NER embeddings
-        deprel = get_long_tensor(batch[3], batch_size)          # stanford dependency parser stuff... not sure
+        words = get_long_tensor(words, batch_size)  # matrix of tokens
+        pos = get_long_tensor(batch[1], batch_size)  # matrix of part of speech embeddings
+        ner = get_long_tensor(batch[2], batch_size)  # matrix for NER embeddings
+        deprel = get_long_tensor(batch[3], batch_size)  # stanford dependency parser stuff... not sure
 
         subj_positions = get_long_tensor(batch[4], batch_size)  # matrix of positional lists relative to subject
-        obj_positions = get_long_tensor(batch[5], batch_size)   # matrix of positional lists relative to object
+        obj_positions = get_long_tensor(batch[5], batch_size)  # matrix of positional lists relative to object
 
         # do padding here, it will get the longest sequence and pad the rest
-        relative_positions = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
+        obj_positions_single = get_long_tensor(batch[6], batch_size)  # matrix, positional ids for all words in sentence
 
         src_pos = get_long_tensor(batch[7], batch_size)  # matrix, positional ids for all words in sentence
 
         # new masks with positional padding
         masks = torch.eq(words, 0)  # should we also do +src_pos?
-        rels = torch.LongTensor(batch[8])                       # list of relation labels for this batch
+        rels = torch.LongTensor(batch[8])  # list of relation labels for this batch
 
-        return (words, masks, pos, ner, deprel, subj_positions, obj_positions, relative_positions, src_pos, rels, orig_idx)
+        return (
+        words, masks, pos, ner, deprel, subj_positions, obj_positions, obj_positions_single, src_pos, rels, orig_idx)
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -408,21 +292,20 @@ def map_to_ids(tokens, vocab):
 def get_positions(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
     # print(start_idx, end_idx, length)
-    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
+    return list(range(-start_idx, 0)) + [0] * (end_idx - start_idx + 1) + list(range(1, length - end_idx))
 
 
 def get_position_modified(start_idx, end_idx, length):
     """ Get subj/obj position sequence. """
     # print(start_idx, end_idx, length)
-    return list(range(-start_idx, 0)) + [0]*(end_idx - start_idx + 1) + list(range(1, length-end_idx))
+    return list(range(-start_idx, 0)) + [0] * (end_idx - start_idx + 1) + list(range(1, length - end_idx))
 
 
 def get_long_tensor(tokens_list, batch_size):
-    """ Convert list of list of tokens to a padded LongTensor. """
-
-    # here the padding is done!!!!
-
-    # print(tokens_list)
+    """
+    Convert list of list of tokens to a padded LongTensor.
+    Also perform padding here.
+    """
 
     token_len = max(len(x) for x in tokens_list)
 

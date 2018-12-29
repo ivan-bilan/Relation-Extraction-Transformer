@@ -6,8 +6,9 @@ import torch
 from torch import nn, optim
 from torch.optim import Optimizer
 
+from utils.opt import OpenAIAdam
 
-# class
+
 class MyAdagrad(Optimizer):
     """Modification of the Adagrad optimizer that allows to specify an initial
     accumulater value. This mimics the behavior of the default Adagrad implementation
@@ -24,15 +25,15 @@ class MyAdagrad(Optimizer):
 
     def __init__(self, params, lr=1e-2, lr_decay=0, init_accu_value=0.1, weight_decay=0):
         defaults = dict(lr=lr, lr_decay=lr_decay, init_accu_value=init_accu_value, \
-                weight_decay=weight_decay)
+                        weight_decay=weight_decay)
         super(MyAdagrad, self).__init__(params, defaults)
 
         for group in self.param_groups:
             for p in group['params']:
                 state = self.state[p]
                 state['step'] = 0
-                state['sum'] = torch.ones(p.data.size()).type_as(p.data) *\
-                        init_accu_value
+                state['sum'] = torch.ones(p.data.size()).type_as(p.data) * \
+                               init_accu_value
 
     def share_memory(self):
         for group in self.param_groups:
@@ -79,6 +80,7 @@ class MyAdagrad(Optimizer):
                         if grad_indices.dim() == 0 or values.dim() == 0:
                             return constructor()
                         return constructor(grad_indices, values, size)
+
                     state['sum'].add_(make_sparse(grad_values.pow(2)))
                     std = state['sum']._sparse_mask(grad)
                     std_values = std._values().sqrt_().add_(1e-10)
@@ -120,6 +122,8 @@ class NAdam(Optimizer):
         http://cs229.stanford.edu/proj2015/054_report.pdf
     .. _On the importance of initialization and momentum in deep learning
         http://www.cs.toronto.edu/~fritz/absps/momentum.pdf
+
+    # TODO: find the original source of this code snippet to give proper credit
     """
 
     def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-8,
@@ -176,9 +180,9 @@ class NAdam(Optimizer):
 
                 # calculate the momentum cache \mu^{t} and \mu^{t+1}
                 momentum_cache_t = beta1 * (
-                    1. - 0.5 * (pow(0.96, state['step'] * schedule_decay)))
+                        1. - 0.5 * (pow(0.96, state['step'] * schedule_decay)))
                 momentum_cache_t_1 = beta1 * (
-                    1. - 0.5 * (pow(0.96, (state['step'] + 1) * schedule_decay)))
+                        1. - 0.5 * (pow(0.96, (state['step'] + 1) * schedule_decay)))
                 m_schedule_new = state['m_schedule'] * momentum_cache_t
                 m_schedule_next = state['m_schedule'] * momentum_cache_t * momentum_cache_t_1
 
@@ -203,7 +207,9 @@ class NAdam(Optimizer):
 
 
 class NoamOpt:
-    "Optim wrapper that implements rate."
+    """
+    Optim wrapper that implements rate.
+    """
 
     def __init__(self, model_size, factor, warmup, optimizer):
         self.optimizer = optimizer
@@ -226,7 +232,7 @@ class NoamOpt:
         self.optimizer.zero_grad()
 
     def rate(self, step=None):
-        "Implement `lrate` above"
+        """Implement `lrate` above"""
         if step is None:
             step = self._step
         return self.factor * \
@@ -236,10 +242,32 @@ class NoamOpt:
 
 # torch specific functions
 def get_optimizer(name, parameters, lr):
+    """
+    This function instantiates optimizers given model parameters and various hyperparameters
+    :param name: name of the optimizer to choose from
+    :param parameters: all trainable model parameters
+    :param lr: learning rate
+    :return: optimizer object
+    """
     if name == 'sgd':
         # TODO: test momentum and weight_decay
-        # 1e-07 decay? , decay is like l2, try without!!!  # weight_decay=1e-6
-        return torch.optim.SGD(parameters, lr=lr)  # bad results: weight_decay=1e-07, , momentum=0.9, nesterov=True
+        # 1e-07 decay?  # weight_decay=1e-6
+        return torch.optim.SGD(parameters, lr=lr, momentum=0.9, nesterov=True)  # bad results: weight_decay=1e-07, momentum=0.9, nesterov=True
+    elif name == "openai_adam":
+        # This optimizer is from: https://github.com/huggingface/pytorch-openai-transformer-lm
+        optimizer_openai = OpenAIAdam(parameters,
+                                      lr=6.25e-5,
+                                      schedule='warmup_linear',
+                                      warmup=0.002,
+                                      t_total=3,  # TODO: not sure what this actually represents
+                                      b1=0.9,
+                                      b2=0.999,
+                                      e=1e-8,
+                                      l2=0.01,
+                                      vector_l2=True,
+                                      max_grad_norm=1)
+
+        return optimizer_openai
     elif name == 'nadam':
         return NAdam(parameters, lr=lr)
     elif name == 'asgd':
@@ -256,7 +284,7 @@ def get_optimizer(name, parameters, lr):
     elif name == "noopt_adam":
         # this comes from http://nlp.seas.harvard.edu/2018/04/03/attention.html
         # but with a modification of using a zero_grad function in the class
-        return NoamOpt(360, 1, 400, torch.optim.Adam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9))
+        return NoamOpt(360, 1, 200, torch.optim.Adam(parameters, lr=0, betas=(0.9, 0.98), eps=1e-9))
     else:
         raise Exception("Unsupported optimizer: {}".format(name))
 
@@ -289,7 +317,7 @@ def keep_partial_grad(grad, topk):
     return grad
 
 
-### model IO
+# model IO
 def save(model, optimizer, opt, filename):
     params = {
         'model': model.state_dict(),

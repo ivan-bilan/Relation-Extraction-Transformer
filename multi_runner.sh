@@ -1,16 +1,7 @@
 #!/bin/bash
 
-# This is an example script of training and running model ensembles.
-# train 5 models with different seeds
-# python runner.py --seed 1111 --id aaa_ff1  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --lr 0.01
-# python runner.py --seed 1111 --id aaa_ff2 --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --lr 0.5
-# python runner.py --seed 1111 --id aaa_ff3  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --lr 1.0
-# python runner.py --seed 1111 --id aaa_ff4  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --n_head 4
-# python runner.py --seed 1111 --id aaa_ff5  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --n_head 2
-# python runner.py --seed 1111 --id aaa_ff6  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --n_head 8
-# python runner.py --seed 1111 --id aaa_ff7  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --weight_no_rel 0.3
-# python runner.py --seed 1111 --id aaa_ff8 --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --weight_rest 0.3
-# break
+# you can run multiple experiments sequentially using this file
+
 python runner.py --seed 1111 --id aaa_ff9  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --old_residual
 python runner.py --seed 1111 --id aaa_ff10  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --use_layer_norm
 python runner.py --seed 1111 --id aaa_ff11  --save_epoch 10  --diagonal_positional_attention  --num_epoch 100 --no-attn

@@ -3,6 +3,8 @@ import torch.nn as nn
 import numpy as np
 
 from global_random_seed import RANDOM_SEED
+from utils.attention_investigation import investigate_attention
+
 # make everything reproducible
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
@@ -17,12 +19,11 @@ class ScaledDotProductAttention(nn.Module):
     def __init__(self, d_k, attn_dropout=0.1, temper_value=0.5):
         super().__init__()
 
-        # add temper as hyperparameter
         self.temper = np.power(d_k, temper_value)    # 0.5 originally
         self.dropout = nn.Dropout(attn_dropout)
         self.softmax = nn.Softmax(dim=2)
 
-    def forward(self, q, k, v, attn_mask=None, position_dpa=None):
+    def forward(self, q, k, v, attn_mask=None, position_dpa=None, sentence_words=None):
 
         # initial attention
         attn = torch.bmm(q, k.transpose(1, 2))
@@ -65,7 +66,7 @@ class ScaledDotProductAttention(nn.Module):
                 b_s, k, l = a.stride()
 
                 # left top to right bottom
-                return torch.as_strided(a, (b, i - j, j), (b_s, k, k + l))
+                return torch.as_strided(a, (b, i - j+1, j), (b_s, k, k + l))
 
                 # left bottom to right top
                 # a = a[..., j-1:, :]
@@ -76,6 +77,10 @@ class ScaledDotProductAttention(nn.Module):
 
             # print(do_flip)
             attn_pos = batch_stripe(do_flip)
+
+            investigate_attention_flag = False
+            if investigate_attention_flag:
+                investigate_attention(attn, attn_pos, sentence_words, self.vocab)
 
             if verbose_sizes:
                 print(attn_pos.size())

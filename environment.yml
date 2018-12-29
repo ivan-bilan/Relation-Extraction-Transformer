@@ -1,0 +1,7 @@
+name: tac_attn_venv
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - pip=10.0.1=py37_0
+  - python=3.5.0

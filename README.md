@@ -177,8 +177,6 @@ per:stateorprovince_of_death         P:  80.00%  R:  28.57%  F1:  42.11%  #: 14
 per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
 per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  ```
- 
-If you can't replicate the results on the master branch, run `pytorch_0_4_1_wip_version_2` using PyTorch 0.4.1.
 
 ## Overview of Available Hyperparameters
 

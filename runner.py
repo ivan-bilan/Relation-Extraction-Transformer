@@ -146,7 +146,7 @@ parser.add_argument('--lr_decay', type=float, default=0.9)
 parser.add_argument('--decay_epoch', type=int, default=15, help='Start LR decay from this epoch.')
 
 parser.add_argument('--optim', type=str, default='sgd', help='sgd, asgd, adagrad, adam, nadam or adamax.')
-parser.add_argument('--num_epoch', type=int, default=60)
+parser.add_argument('--num_epoch', type=int, default=70)
 parser.add_argument('--batch_size', type=int, default=50)
 parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
 
@@ -158,7 +158,7 @@ parser.add_argument('--save_dir', type=str, default='./saved_models', help='Root
 
 parser.add_argument(
     '--id', type=str, 
-    default='tmp4',                                 # change model folder output before running
+    default='tmp_model',  # change model folder output
     help='Model ID under which to save models.'
    )
 

@@ -1,5 +1,3 @@
-''' Define the Transformer model '''
-
 import copy
 import torch
 import torch.nn as nn
@@ -215,7 +213,8 @@ class Encoder(nn.Module):
             enc_output, enc_slf_attn = enc_layer(
                 enc_output,
                 slf_attn_mask=enc_slf_attn_mask,
-                position_dpa=position_dpa
+                position_dpa=position_dpa,
+                sentence_words=enc_non_embedded
             )
 
         enc_slf_attns += [enc_slf_attn]

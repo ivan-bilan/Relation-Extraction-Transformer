@@ -1,4 +1,3 @@
-''' Define the Layers '''
 import torch
 import numpy as np
 import torch.nn as nn
@@ -39,11 +38,12 @@ class EncoderLayer(nn.Module):
             d_model, d_inner_hid, dropout=dropout, use_batch_norm=use_batch_norm
         )
 
-    def forward(self, enc_input, slf_attn_mask=None, position_dpa=None):
+    def forward(self, enc_input, slf_attn_mask=None, position_dpa=None, sentence_words=None):
 
         # here q, k, w are all the same at input
         enc_output, enc_slf_attn = self.slf_attn(
-            enc_input, enc_input, enc_input, attn_mask=slf_attn_mask, position_dpa_vector=position_dpa
+            enc_input, enc_input, enc_input, attn_mask=slf_attn_mask, position_dpa_vector=position_dpa,
+            sentence_words=sentence_words
         )
 
         # do feed forward
