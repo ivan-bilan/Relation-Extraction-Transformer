@@ -178,6 +178,9 @@ per:stateorprovinces_of_residence    P:  65.28%  R:  58.02%  F1:  61.44%  #: 81
 per:title                            P:  77.13%  R:  87.00%  F1:  81.77%  #: 500
  ```
 
+WARNING:
+Some users are not able to reproduce the results with newer PyTorch versions. At the moment of the pre-print we used PyTorch 0.4.1 to get the results. Currently the project might require significant changes or updates when using newer PyTorch version to achieve the previously reported results. If you happend to find the cause of the performance degradation, feel free to contribute to the project.
+
 ## Overview of Available Hyperparameters
 
 | **General Hyperparameters**      | | |
