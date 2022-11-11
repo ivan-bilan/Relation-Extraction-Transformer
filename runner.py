@@ -20,7 +20,7 @@ from global_random_seed import RANDOM_SEED
 # this doesn't seem to work any better than what we have
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from data.loader import DataLoader
-from model.rnn import RelationModel
+from model.relation_model import RelationModel
 from utils import scorer, constant, helper
 from utils.vocab import Vocab
 
